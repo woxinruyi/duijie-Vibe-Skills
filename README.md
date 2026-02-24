@@ -120,9 +120,49 @@ pwsh -File .\scripts\bootstrap\sync-local-compat.ps1
 | 项目 / 来源 | 用途 |
 |---|---|
 | `SynkraAI/aios-core` | 引入 Agentic Agile 角色化协作（PM/PO/QA/DevOps 等） |
+| `x1xhlol/system-prompts-and-models-of-ai-tools` | 作为外部语料镜像来源，提取路由信号与关键词候选，服务 VCO 路由优化 |
+| `muratcankoylan/Agent-Skills-for-Context-Engineering` | 作为 Context Retro Advisor 的专家知识源，驱动 CER 复盘框架 |
 | `SuperClaude_Framework`（可选） | 提供 `sc` 命令体系兼容能力 |
 | `claude-flow`（可选） | 外部编排增强能力 |
 | 本仓库 VCO 核心 | 分级执行、Pack 路由、规则门禁、验证体系 |
+
+## 外部项目融合说明
+
+### A. `system-prompts-and-models-of-ai-tools` 在 VCO 中的作用
+
+这部分不是“直接抄系统提示词进 VCO”，而是作为外部语料输入到一条受控的数据化流程：
+
+1. 语料镜像到 `third_party/system-prompts-mirror`
+2. 通过 `scripts/research/extract-prompt-signals.ps1` 抽取 prompt/tool 信号
+3. 通过 `scripts/research/generate-vco-suggestions.ps1` 生成候选路由关键词
+4. 通过 `scripts/verify/vibe-external-corpus-gate.ps1` 做门禁对比后再决定是否采纳
+
+对应文档与产物：
+
+- 流程说明：`docs/external-corpus-integration.md`
+- 信号抽取：`scripts/research/extract-prompt-signals.ps1`
+- 候选生成：`scripts/research/generate-vco-suggestions.ps1`
+- 安全门禁：`scripts/verify/vibe-external-corpus-gate.ps1`
+- 产物目录：`outputs/external-corpus/`
+
+核心原则：外部语料用于“路由信号工程”，不直接污染 `SKILL.md` 主编排协议。
+
+### B. `Agent-Skills-for-Context-Engineering` 在 VCO 中的作用
+
+这部分融合在 VCO 的 LEARN / retro 闭环，定位是 advisory-only（建议层），不自动改配置：
+
+1. 在 `SKILL.md` 中作为 Context Retro Advisor 的指导知识源
+2. 在 `protocols/retro.md` 中落地为可执行的复盘流程
+3. 输出统一 CER（Context Evidence Report）结构，支撑跨迭代对比
+
+对应文档与组件：
+
+- 设计文档：`docs/context-retro-advisor-design.md`
+- 执行协议：`protocols/retro.md`
+- CER 模板与 Schema：`templates/cer-report.*`
+- CER 对比工具：`scripts/verify/cer-compare.ps1`
+
+核心价值：把“上下文工程经验”变成可量化、可对比、可复用的复盘资产，而不是一次性结论。
 
 ## 当前版本更新重点
 

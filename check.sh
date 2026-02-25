@@ -31,7 +31,7 @@ check_path() {
 }
 
 check_path "settings.json" "${TARGET_ROOT}/settings.json"
-for n in vibe dialectic local-vco-roles spec-kit-vibe-compat superclaude-framework-compat tdd-guide think-harder; do
+for n in vibe dialectic local-vco-roles spec-kit-vibe-compat superclaude-framework-compat ralph-loop cancel-ralph tdd-guide think-harder; do
   check_path "skill/${n}" "${TARGET_ROOT}/skills/${n}/SKILL.md"
 done
 for n in brainstorming writing-plans subagent-driven-development systematic-debugging; do

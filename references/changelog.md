@@ -1,5 +1,26 @@
 # VCO Changelog
 
+## v2.3.2 (2026-02-25)
+
+- 接入 `open-ralph-wiggum` 作为 `ralph-loop` 的可选后端（不替代 VCO 路由层）：
+  - `bundled/skills/ralph-loop/scripts/ralph-loop.ps1` 新增双引擎：
+    - `compat`（默认，保留原行为）
+    - `open`（`--engine open`，委托外部 `ralph` CLI）
+  - open 引擎默认安全参数：
+    - 未显式指定 `--agent` 时自动补 `--agent codex`
+    - 默认注入 `--no-commit`（可用 `--open-allow-commit` 关闭）
+  - open 引擎与 compat-only 参数做显式边界保护：
+    - `--next` / `--force` / `--state-file` / `--stop` 在 open 模式下拒绝
+- 安装与依赖登记：
+  - `config/upstream-lock.json` 新增 `Th0rgal/open-ralph-wiggum`（optional-external-cli）
+  - `config/plugins-manifest.codex.json` 新增可选 scripted 安装项 `@th0rgal/ralph-wiggum`
+  - `install.ps1` / `install.sh` 在 `-InstallExternal` 时安装 `@th0rgal/ralph-wiggum`
+- 协议与文档更新：
+  - `protocols/team.md`：Option C 增补 dual-engine 使用边界
+  - `references/fallback-chains.md`：新增 Ralph 引擎回退链（open -> compat -> manual）
+  - `references/tool-registry.md`：补充 open backend 与职责边界
+  - `README.md`：新增 Ralph 双引擎接入与使用说明
+
 ## v2.3.1 (2026-02-25)
 
 - 完成 OpenSpec 治理层零冲突接入（post-route governance overlay）：

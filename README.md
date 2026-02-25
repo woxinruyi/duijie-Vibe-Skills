@@ -36,6 +36,9 @@
 - `bundled/skills/*`：Codex 兼容技能镜像。
 - `bundled/superpowers-skills/*`：规划、调试、代码评审等工作流增强技能。
 - 可选外部增强（按需安装）：`SuperClaude_Framework` 命令集、`claude-flow`。
+- `ralph-loop` 采用双引擎接入：
+  - `compat`（默认）：本地状态循环，手动 `--next`，稳定低依赖
+  - `open`（可选）：委托 `open-ralph-wiggum` 自动循环后端（`--engine open`）
 
 ### 4. OpenSpec 治理层（零冲突接入）
 
@@ -107,7 +110,8 @@ pwsh -File .\check.ps1 -Profile full
 pwsh -File .\install.ps1 -Profile full -InstallExternal
 ```
 
-说明：当前安装器为 Codex-only 主模式。`plugins-manifest.codex.json` 中的插件安装命令不会被自动执行，会输出手动安装提示，避免跨运行时误装。
+说明：当前安装器为 Codex-only 主模式。`plugins-manifest.codex.json` 中的插件安装命令不会被自动执行，会输出手动安装提示，避免跨运行时误装。  
+`-InstallExternal` 会尝试安装 `claude-flow` 与 `@th0rgal/ralph-wiggum`（open 引擎）。
 
 ### 指定安装目录
 
@@ -163,11 +167,29 @@ pwsh -File .\scripts\governance\set-openspec-rollout.ps1 -Stage shadow
 pwsh -File .\scripts\bootstrap\sync-local-compat.ps1
 ```
 
+### 4. Ralph 双引擎用法（可选）
+
+```powershell
+# 默认 compat 引擎（本地状态循环）
+powershell -ExecutionPolicy Bypass -File "$env:USERPROFILE\\.codex\\skills\\ralph-loop\\scripts\\ralph-loop.ps1" `
+  Build a todo API --max-iterations 10 --completion-promise DONE
+
+# open 引擎（open-ralph-wiggum 自动循环后端）
+powershell -ExecutionPolicy Bypass -File "$env:USERPROFILE\\.codex\\skills\\ralph-loop\\scripts\\ralph-loop.ps1" `
+  --engine open Build a todo API --max-iterations 10 --completion-promise DONE
+```
+
+边界约束：
+
+- `ralph-loop` 与 XL team orchestration 互斥。
+- `open` 引擎建议保持 no-commit 模式，循环结束后再走 VCO 质量门禁与人工提交。
+
 ## 使用到的上游项目与方法论
 
 | 项目 / 来源 | 用途 |
 |---|---|
 | `SynkraAI/aios-core` | 引入 Agentic Agile 角色化协作（PM/PO/QA/DevOps 等） |
+| `Th0rgal/open-ralph-wiggum` | 作为 `ralph-loop --engine open` 的可选自动循环后端（不替代 VCO 路由层） |
 | `x1xhlol/system-prompts-and-models-of-ai-tools` | 作为外部语料镜像来源，提取路由信号与关键词候选，服务 VCO 路由优化 |
 | `muratcankoylan/Agent-Skills-for-Context-Engineering` | 作为 Context Retro Advisor 的专家知识源，驱动 CER 复盘框架 |
 | `SuperClaude_Framework`（可选） | 提供 `sc` 命令体系兼容能力 |

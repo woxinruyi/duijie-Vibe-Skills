@@ -48,8 +48,12 @@ ruflo remains optional for workflow/memory enhancements.
 ### Option C: Ralph-loop (Iterative Tasks)
 When task requires repeated iteration on same prompt:
 1. User explicitly invokes /ralph-loop
-2. Define completion promise (exit condition)
-3. Set max iterations (safety limit)
+2. Choose engine:
+   - `compat` (default): local state loop, manual `--next`, stable and low-dependency
+   - `open`: delegates to external open-ralph-wiggum CLI for auto-iteration
+3. Define completion promise (exit condition)
+4. Set max iterations (safety limit)
+5. For `open` engine, prefer no-commit mode during active loop and run VCO quality gates before any manual commit
 
 IMPORTANT: Ralph-loop is MUTUALLY EXCLUSIVE with active team orchestration.
 

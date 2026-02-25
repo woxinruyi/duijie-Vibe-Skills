@@ -14,6 +14,12 @@ function Copy-DirContent {
     [string]$Destination
   )
   if (-not (Test-Path -LiteralPath $Source)) { return }
+  $sourceFull = [System.IO.Path]::GetFullPath($Source)
+  $destinationFull = [System.IO.Path]::GetFullPath($Destination)
+  if ($sourceFull -eq $destinationFull) {
+    Write-Host "Skip self-copy: $sourceFull"
+    return
+  }
   New-Item -ItemType Directory -Force -Path $Destination | Out-Null
   Copy-Item -Path (Join-Path $Source '*') -Destination $Destination -Recurse -Force
 }
@@ -132,6 +138,13 @@ if ($InstallExternal) {
       Write-Host "Installed claude-flow"
     } catch {
       Write-Warning "Failed to install claude-flow"
+    }
+
+    try {
+      npm install -g @th0rgal/ralph-wiggum | Out-Null
+      Write-Host "Installed open-ralph-wiggum (@th0rgal/ralph-wiggum)"
+    } catch {
+      Write-Warning "Failed to install open-ralph-wiggum"
     }
   }
 

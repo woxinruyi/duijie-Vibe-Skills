@@ -72,6 +72,7 @@ fi
 if [[ "${INSTALL_EXTERNAL}" == "true" ]]; then
   if command -v npm >/dev/null 2>&1; then
     npm install -g claude-flow || true
+    npm install -g @th0rgal/ralph-wiggum || true
   fi
 fi
 

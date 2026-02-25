@@ -4,7 +4,7 @@
   [string]$TargetRoot = (Join-Path $env:USERPROFILE ".codex")
 )
 
-$requiredSkills = @('vibe', 'dialectic', 'local-vco-roles', 'spec-kit-vibe-compat', 'superclaude-framework-compat', 'tdd-guide', 'think-harder')
+$requiredSkills = @('vibe', 'dialectic', 'local-vco-roles', 'spec-kit-vibe-compat', 'superclaude-framework-compat', 'ralph-loop', 'cancel-ralph', 'tdd-guide', 'think-harder')
 $requiredWorkflow = @('brainstorming', 'writing-plans', 'subagent-driven-development', 'systematic-debugging')
 $optionalWorkflow = @('requesting-code-review', 'receiving-code-review', 'verification-before-completion')
 

@@ -13,6 +13,7 @@ Complete reference of VCO execution tools, their capabilities, APIs, state paths
 | 5 | Everything-claude-code | Plugin (hooks + skills + agents) | SessionStart, PreToolUse, PostToolUse, Stop | ~/.claude/sessions/, ~/.claude/homunculus/ | ✅ |
 | 6 | Claude-flow/ruflo (collaboration backend) | MCP Server | PreToolUse, PostToolUse, PreCompact, Stop | .claude-flow/ | ⚠️ MCP依赖 |
 | 7 | Codex native team runtime | Native runtime APIs | None | Session runtime | ✅ |
+| 8 | Open Ralph Wiggum CLI (optional) | External CLI | None | .ralph/ | ⚠️ Optional |
 
 ## Verification Status Legend
 
@@ -80,9 +81,10 @@ Complete reference of VCO execution tools, their capabilities, APIs, state paths
 
 ---
 
-## 3. Ralph-loop (frankbria/ralph-claude-code)
+## 3. Ralph-loop (compat wrapper + optional open backend)
 
-**Location**: ~/.claude/plugins/cache/claude-plugins-official/ralph-loop/
+**Compatibility wrapper location**: ~/.codex/skills/ralph-loop/
+**Optional external backend**: `ralph` CLI from `@th0rgal/ralph-wiggum`
 
 ### Skills
 | Skill | Purpose | Verified |
@@ -92,11 +94,11 @@ Complete reference of VCO execution tools, their capabilities, APIs, state paths
 | help | Explain plugin usage | ✅ |
 
 ### Characteristics
-- Only registers Stop hook
-- Blocks ALL session exits when active
-- State file: .claude/ralph-loop.local.md (per-project)
-- Intelligent exit detection: max iterations, completion promise
-- No coordination with other plugins
+- Keeps stable command surface (`ralph-loop`, `cancel-ralph`) for VCO routing compatibility
+- `compat` engine: local state file `.claude/ralph-loop.local.md`, manual `--next`, low dependency
+- `open` engine: delegates to external open-ralph-wiggum CLI for auto-iteration (`--engine open`)
+- `cancel-ralph` only manages `compat` local state
+- Ralph-loop remains mutually exclusive with active XL team orchestration
 
 ---
 
@@ -232,3 +234,21 @@ Characteristics:
 - No MCP dependency
 - Primary XL path in VCO
 - Works with role-specialized prompts and ownership boundaries
+
+---
+
+## 8. Open Ralph Wiggum CLI (Optional Auto-Loop Backend)
+
+**Package**: `@th0rgal/ralph-wiggum`  
+**Binary**: `ralph`
+
+### Key Capabilities
+- Auto-iteration loop for repeated prompts (`--max-iterations`, completion promises)
+- Tasks mode (`--tasks`, `--add-task`, `--remove-task`, `--list-tasks`)
+- Mid-loop context injection (`--add-context`, `--clear-context`)
+- Runtime status dashboard (`--status`)
+
+### VCO Integration Boundary
+- Invoked only through local `ralph-loop` wrapper with `--engine open`
+- Must not run concurrently with active XL team orchestration
+- Recommended to use no-commit mode during loop and complete VCO quality gates before manual commit

@@ -96,6 +96,19 @@ Direct: Single-agent execution with direct Claude reasoning
 | Review | Codex native multi-reviewer + optional ruflo consensus | Codex native multi-reviewer only | superpowers:dispatching-parallel-agents |
 | Research | Codex native research team + ruflo memory | Codex native research team only | claude-code-settings:deep-research |
 
+## Ralph-loop Engine Fallback
+
+When user explicitly uses `/ralph-loop`:
+
+| Primary | Fallback | Last resort |
+|---------|----------|-------------|
+| `ralph-loop --engine open` (external open-ralph-wiggum) | `ralph-loop --engine compat` (local state loop) | direct manual iteration without loop wrapper |
+
+Notes:
+- `open` engine is optional and depends on external `ralph` CLI availability.
+- `compat` engine is always the stability baseline inside VCO.
+- `cancel-ralph` only affects `compat` engine local state.
+
 ## Memory System Fallbacks
 
 | System | Primary | Fallback |

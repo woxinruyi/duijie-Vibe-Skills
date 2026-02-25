@@ -30,6 +30,14 @@
       ]
     },
     {
+      "id": "Th0rgal/open-ralph-wiggum",
+      "upstream_repo": "https://github.com/Th0rgal/open-ralph-wiggum",
+      "upstream_ref": "master",
+      "integration_mode": "optional-external-cli",
+      "local_rewrite_required": false,
+      "notes": "Optional backend for local ralph-loop wrapper (`--engine open`), installed via npm package @th0rgal/ralph-wiggum"
+    },
+    {
       "id": "SuperClaude-Org/SuperClaude_Framework",
       "upstream_repo": "https://github.com/SuperClaude-Org/SuperClaude_Framework",
       "upstream_ref": "master",

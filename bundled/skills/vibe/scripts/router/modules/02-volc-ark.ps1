@@ -79,7 +79,8 @@ function Get-VolcArkEmbeddingsOutputVectors {
             } catch { }
         }
 
-        return @($vectors)
+        if ($vectors.Count -eq 0) { return @() }
+        return ,$vectors
     } catch {
         return @()
     }
@@ -90,7 +91,7 @@ function Invoke-VolcArkEmbeddingsCreate {
         [Parameter(Mandatory = $true)]
         [string]$Model,
         [Parameter(Mandatory = $true)]
-        [object]$Input,
+        [object]$InputItems,
         [int]$TimeoutMs = 2500,
         [string]$ApiKey,
         [string]$BaseUrl,
@@ -130,7 +131,7 @@ function Invoke-VolcArkEmbeddingsCreate {
 
     $body = [ordered]@{
         model = $Model
-        input = $Input
+        input = $InputItems
     }
 
     $json = ($body | ConvertTo-Json -Depth 20 -Compress)
@@ -177,4 +178,3 @@ function Invoke-VolcArkEmbeddingsCreate {
         }
     }
 }
-

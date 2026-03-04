@@ -598,7 +598,7 @@ function Get-VcoEmbeddingsForTextsWithCache {
                 "openai" {
                     $result = Invoke-OpenAiEmbeddingsCreate `
                         -Model $EmbeddingModel `
-                        -Input @($missingTexts) `
+                        -InputItems @($missingTexts) `
                         -TimeoutMs $timeoutMs `
                         -BaseUrl $embeddingProviderBaseUrl
                 }
@@ -611,7 +611,7 @@ function Get-VcoEmbeddingsForTextsWithCache {
 
                     $result = Invoke-VolcArkEmbeddingsCreate `
                         -Model $EmbeddingModel `
-                        -Input @($items) `
+                        -InputItems @($items) `
                         -TimeoutMs $timeoutMs `
                         -BaseUrl $embeddingProviderBaseUrl `
                         -EndpointPath $endpointPath `
@@ -1145,7 +1145,7 @@ function Invoke-LlmDiffDigestProvider {
         $r = Invoke-OpenAiResponsesCreate `
             -Model $model `
             -BaseUrl $baseUrl `
-            -Input $input `
+            -InputItems $input `
             -TextFormat $textFormat `
             -Instructions $instructions `
             -MaxOutputTokens $maxTokens `
@@ -1373,7 +1373,7 @@ function Invoke-LlmConfirmQuestionBoosterProvider {
         $r = Invoke-OpenAiResponsesCreate `
             -Model $model `
             -BaseUrl $baseUrl `
-            -Input $input `
+            -InputItems $input `
             -TextFormat $textFormat `
             -Instructions $instructions `
             -MaxOutputTokens $maxTokens `
@@ -1746,7 +1746,7 @@ function Invoke-LlmAccelerationProviderCommittee {
 	        $r = Invoke-OpenAiResponsesCreate `
 	            -Model $model `
 	            -BaseUrl $baseUrl `
-	            -Input $input `
+	            -InputItems $input `
 	            -TextFormat $textFormat `
 	            -Instructions $instructions `
 	            -MaxOutputTokens ([int]$PolicyResolved.provider.max_output_tokens) `

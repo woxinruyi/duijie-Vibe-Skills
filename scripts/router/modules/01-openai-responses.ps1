@@ -74,6 +74,45 @@ function Get-OpenAiResponseOutputText {
     return ($parts -join "`n").Trim()
 }
 
+function ConvertFrom-OpenAiEventStreamDataObjects {
+    param([string]$EventStreamText)
+
+    if (-not $EventStreamText) { return @() }
+
+    $items = @()
+    foreach ($line in ($EventStreamText -split "`n")) {
+        $trim = ([string]$line).Trim()
+        if (-not $trim.StartsWith("data:")) { continue }
+
+        $payload = $trim.Substring(5).Trim()
+        if (-not $payload -or $payload -eq "[DONE]") { continue }
+
+        try {
+            $obj = ($payload | ConvertFrom-Json)
+            if ($obj) { $items += $obj }
+        } catch { }
+    }
+
+    return @($items)
+}
+
+function Get-OpenAiResponseFromEventStreamText {
+    param([string]$EventStreamText)
+
+    if (-not $EventStreamText) { return $null }
+
+    $events = @(ConvertFrom-OpenAiEventStreamDataObjects -EventStreamText $EventStreamText)
+    if ($events.Count -eq 0) { return $null }
+
+    $withResponse = @($events | Where-Object { $_ -and $_.response })
+    if ($withResponse.Count -eq 0) { return $null }
+
+    $completed = @($withResponse | Where-Object { $_.type -eq "response.completed" -or ($_.response -and $_.response.status -eq "completed") })
+    if ($completed.Count -gt 0) { return $completed[-1].response }
+
+    return $withResponse[-1].response
+}
+
 function Get-OpenAiChatCompletionOutputText {
     param([object]$Response)
 
@@ -115,7 +154,8 @@ function Get-OpenAiEmbeddingsOutputVectors {
             }
         }
 
-        return @($vectors)
+        if ($vectors.Count -eq 0) { return @() }
+        return ,$vectors
     } catch {
         return @()
     }
@@ -126,7 +166,7 @@ function Invoke-OpenAiResponsesCreate {
         [Parameter(Mandatory = $true)]
         [string]$Model,
         [Parameter(Mandatory = $true)]
-        [object]$Input,
+        [object]$InputItems,
         [Parameter(Mandatory = $true)]
         [object]$TextFormat,
         [string]$Instructions = "",
@@ -158,7 +198,7 @@ function Invoke-OpenAiResponsesCreate {
 
     $body = [ordered]@{
         model = $Model
-        input = $Input
+        input = $InputItems
         text = [ordered]@{
             format = $TextFormat
         }
@@ -184,7 +224,22 @@ function Invoke-OpenAiResponsesCreate {
     try {
         $resp = Invoke-RestMethod -Uri $endpoint -Method Post -Headers $headers -Body $json -TimeoutSec $timeoutSec
         $sw.Stop()
-        $outputText = Get-OpenAiResponseOutputText -Response $resp
+
+        $respObj = $resp
+        try {
+            if ($respObj -is [string]) {
+                $s = [string]$respObj
+                $parsed = $null
+                try { $parsed = ($s | ConvertFrom-Json) } catch { }
+                if (-not $parsed -and ($s -match "(^|`n)event:\s" -or $s -match "(^|`n)data:\s")) {
+                    $candidate = Get-OpenAiResponseFromEventStreamText -EventStreamText $s
+                    if ($candidate) { $parsed = $candidate }
+                }
+                if ($parsed) { $respObj = $parsed }
+            }
+        } catch { }
+
+        $outputText = Get-OpenAiResponseOutputText -Response $respObj
         return [pscustomobject]@{
             ok = $true
             abstained = $false
@@ -192,7 +247,7 @@ function Invoke-OpenAiResponsesCreate {
             status_code = 200
             latency_ms = [int]$sw.ElapsedMilliseconds
             output_text = $outputText
-            response = $resp
+            response = $respObj
             error = $null
         }
     } catch {
@@ -313,7 +368,7 @@ function Invoke-OpenAiEmbeddingsCreate {
         [Parameter(Mandatory = $true)]
         [string]$Model,
         [Parameter(Mandatory = $true)]
-        [object]$Input,
+        [object]$InputItems,
         [int]$TimeoutMs = 2500,
         [string]$ApiKey,
         [string]$BaseUrl
@@ -338,7 +393,7 @@ function Invoke-OpenAiEmbeddingsCreate {
 
     $body = [ordered]@{
         model = $Model
-        input = $Input
+        input = $InputItems
     }
 
     $json = ($body | ConvertTo-Json -Depth 20 -Compress)

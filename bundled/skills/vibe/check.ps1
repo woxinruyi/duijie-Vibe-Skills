@@ -2,7 +2,8 @@ param(
   [ValidateSet("minimal", "full")]
   [string]$Profile = "full",
   [string]$TargetRoot = (Join-Path $env:USERPROFILE ".codex"),
-  [switch]$SkipRuntimeFreshnessGate
+  [switch]$SkipRuntimeFreshnessGate,
+  [switch]$Deep
 )
 
 $RepoRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
@@ -344,6 +345,7 @@ function Check-Path {
 Write-Host "=== VCO Codex Health Check ===" -ForegroundColor Cyan
 Write-Host "Target: $TargetRoot"
 Write-Host "SkipRuntimeFreshnessGate: $SkipRuntimeFreshnessGate"
+Write-Host "Deep: $Deep"
 
 Check-Path -Label "settings.json" -Path (Join-Path $TargetRoot 'settings.json')
 Check-Path -Label "plugins manifest" -Path (Join-Path $TargetRoot 'config\plugins-manifest.codex.json')
@@ -418,6 +420,25 @@ if (Get-Command npm -ErrorAction SilentlyContinue) {
 } else {
   Write-Host "[WARN] npm not found (needed for claude-flow)" -ForegroundColor Yellow
   $warn++
+}
+
+if ($Deep) {
+  $doctorPath = Join-Path $RepoRoot 'scripts\verify\vibe-bootstrap-doctor-gate.ps1'
+  if (-not (Test-Path -LiteralPath $doctorPath)) {
+    Write-Host "[FAIL] vibe bootstrap doctor gate script -> $doctorPath" -ForegroundColor Red
+    $fail++
+  } else {
+    $global:LASTEXITCODE = 0
+    & $doctorPath -TargetRoot $TargetRoot -WriteArtifacts
+    $doctorExitCode = if ($null -eq $LASTEXITCODE) { 0 } else { [int]$LASTEXITCODE }
+    if ($doctorExitCode -eq 0) {
+      Write-Host '[OK] vibe bootstrap doctor gate'
+      $pass++
+    } else {
+      Write-Host '[FAIL] vibe bootstrap doctor gate' -ForegroundColor Red
+      $fail++
+    }
+  }
 }
 
 Write-Host ""

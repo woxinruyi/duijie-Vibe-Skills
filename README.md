@@ -93,12 +93,84 @@ VibeSkills 的目标不是把这些组件堆在一起。
 
 你可以直接从这里开始。
 
-### 快速安装
+### 安装指南
+
+#### 这里说的“满血版”是什么
+
+这里的“满血版”不是“仓库 clone 下来就算完成”，而是：
+
+- 仓库内随附的 skills、governance 配置、脚本和镜像内容都已经落到本地
+- 当前 MCP profile 已经物化为 active 配置
+- 安装后已经跑过 deep health check
+- 仍然需要宿主侧手工 provision 的插件、MCP、密钥被明确列出来，而不是被静默跳过
+
+#### 满血安装前置条件
+
+- `git`
+- `node` 和 `npm`
+- `python3` 或 `python`
+- Windows：`powershell` 或 `pwsh`
+- Linux / macOS：`bash`
+- 推荐 Linux / macOS 额外安装：`pwsh`（PowerShell 7），这样可以进入权威的 full doctor / gate 路径
+
+如果 Linux / macOS 没有 `pwsh`，依然可以安装完整仓库内容并物化 MCP active profile，但 PowerShell 侧的权威 doctor gates 会退化为 shell warning。
+
+#### Windows
 
 ```powershell
-pwsh -File .\install.ps1 -Profile full -StrictOffline
-pwsh -File .\check.ps1 -Profile full -Deep
+pwsh -File .\scripts\bootstrap\one-shot-setup.ps1
+# Windows PowerShell fallback:
+powershell -ExecutionPolicy Bypass -File .\scripts\bootstrap\one-shot-setup.ps1
 ```
+
+#### Linux / macOS
+
+```bash
+bash ./scripts/bootstrap/one-shot-setup.sh
+```
+
+可选示例：
+
+```bash
+# 安装到自定义 Codex 根目录
+bash ./scripts/bootstrap/one-shot-setup.sh --target-root "$HOME/.codex"
+
+# 安装时强制执行 offline closure gate
+bash ./scripts/bootstrap/one-shot-setup.sh --strict-offline
+```
+
+这两个 one-shot bootstrap 都会完成同一套治理安装动作：
+
+- 安装 shipped runtime payload 到 `~/.codex`
+- 在支持的平台上安装可自动安装的外部 CLI
+- 根据选定 profile 物化 `mcp/servers.active.json`
+- 运行 deep readiness check
+
+#### 重新执行 deep doctor
+
+Windows：
+
+```powershell
+pwsh -File .\check.ps1 -Profile full -Deep
+# Windows PowerShell fallback:
+powershell -ExecutionPolicy Bypass -File .\check.ps1 -Profile full -Deep
+```
+
+Linux / macOS：
+
+```bash
+bash ./check.sh --profile full --deep
+```
+
+#### 想进入真正的满血 MCP 体验，还需要手工补齐这些项
+
+这些部分不会被仓库伪装成“自动完成”，必须在宿主环境里自己 provision：
+
+- 必需 host plugins：`superpowers`、`everything-claude-code`、`claude-code-settings`、`hookify`、`ralph-loop`
+- plugin-backed MCP surfaces：`github`、`context7`、`serena`
+- 需要在线能力时的 provider secrets：`OPENAI_API_KEY`，以及你实际使用的其他 provider keys
+
+如果这些还没有 provision，doctor 的正确结果应该是 `manual_actions_pending`，而不是虚假的“everything ready”。
 
 ### 路由与治理验证
 

@@ -93,12 +93,80 @@ If you are:
 
 You can start here.
 
-### Quick Install
+### Install Guide
+
+#### What "full-featured" means here
+
+A full-featured VibeSkills setup is not just "the repo cloned successfully".
+It means all shipped skills and governance assets are installed locally, the active MCP profile is materialized, the runtime passes deep health checks, and the remaining host-managed surfaces are called out explicitly instead of being silently skipped.
+
+#### Full-feature prerequisites
+
+- `git`
+- `node` and `npm`
+- `python3` or `python`
+- Windows: `powershell` or `pwsh`
+- Linux/macOS: `bash`
+- Recommended on Linux/macOS for authoritative full verification: `pwsh` (PowerShell 7)
+
+Without `pwsh`, Linux/macOS still gets the full shipped content and the MCP active profile, but the authoritative PowerShell doctor gates are downgraded to shell-safe warnings.
+
+#### Windows
 
 ```powershell
-pwsh -File .\install.ps1 -Profile full -StrictOffline
-pwsh -File .\check.ps1 -Profile full -Deep
+pwsh -File .\scripts\bootstrap\one-shot-setup.ps1
+# Windows PowerShell fallback:
+powershell -ExecutionPolicy Bypass -File .\scripts\bootstrap\one-shot-setup.ps1
 ```
+
+#### Linux / macOS
+
+```bash
+bash ./scripts/bootstrap/one-shot-setup.sh
+```
+
+Optional examples:
+
+```bash
+# install to a custom Codex root
+bash ./scripts/bootstrap/one-shot-setup.sh --target-root "$HOME/.codex"
+
+# enforce the offline closure gate during install
+bash ./scripts/bootstrap/one-shot-setup.sh --strict-offline
+```
+
+Both one-shot bootstraps do the same governed work:
+
+- install the shipped runtime payload under `~/.codex`
+- install automatable external CLIs where supported
+- materialize `mcp/servers.active.json` from the selected profile
+- run the deep readiness check
+
+#### Re-run the deep doctor
+
+Windows:
+
+```powershell
+pwsh -File .\check.ps1 -Profile full -Deep
+# Windows PowerShell fallback:
+powershell -ExecutionPolicy Bypass -File .\check.ps1 -Profile full -Deep
+```
+
+Linux / macOS:
+
+```bash
+bash ./check.sh --profile full --deep
+```
+
+#### Manual follow-up required for a true full MCP experience
+
+These surfaces are intentionally not faked by the repo and must be provisioned on the host:
+
+- Required host plugins: `superpowers`, `everything-claude-code`, `claude-code-settings`, `hookify`, `ralph-loop`
+- Plugin-backed MCP surfaces: `github`, `context7`, `serena`
+- Provider secrets when you want online execution: `OPENAI_API_KEY` and any optional provider keys you actually use
+
+If those are not provisioned yet, the doctor should end in `manual_actions_pending`, not in a false "everything is ready" state.
 
 ### Routing and Governance Checks
 
@@ -111,6 +179,7 @@ pwsh -File .\scripts\verify\vibe-routing-stability-gate.ps1 -Strict
 
 - [`SKILL.md`](./SKILL.md): the main VCO protocol and execution model
 - [`docs/README.md`](./docs/README.md): governance docs, plans, releases, and integration spine
+- [`docs/one-shot-setup.md`](./docs/one-shot-setup.md): the exact one-shot bootstrap path and readiness-state model
 - [`config/index.md`](./config/index.md): machine-readable routing, cleanliness, packaging, and rollout config
 - [`references/index.md`](./references/index.md): contracts, registries, matrices, ledgers, and overlays
 - [`scripts/README.md`](./scripts/README.md): router, governance, verify, overlay, and setup surfaces

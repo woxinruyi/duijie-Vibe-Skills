@@ -1,5 +1,14 @@
 # VCO Changelog
 
+## v2.3.32 (2026-03-13)
+
+- Added dual-platform full-setup onboarding so README now documents a governed "full-featured" install path for both Windows and Linux / macOS.
+- Added `scripts/bootstrap/one-shot-setup.sh` to close the shell-native bootstrap gap with install -> settings seed -> MCP active profile materialization -> deep check.
+- Updated deployment and one-shot setup docs to make the full-feature boundary explicit: what the repo can automate, and what still must be provisioned at the host/plugin/secret layer.
+- Regenerated `config/skills-lock.json`, resynced canonical and bundled mirrors, and re-cut the governed release surface to `v2.3.32`.
+- Detailed release notes: `docs/releases/v2.3.32.md`.
+
+
 ## v2.3.31 (2026-03-13)
 
 - Completed the governed execution closure for:

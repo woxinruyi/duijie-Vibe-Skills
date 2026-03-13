@@ -4,6 +4,7 @@ set -euo pipefail
 PROFILE="full"
 TARGET_ROOT="${HOME}/.codex"
 SKIP_RUNTIME_FRESHNESS_GATE="false"
+DEEP="false"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 while [[ $# -gt 0 ]]; do
@@ -11,6 +12,7 @@ while [[ $# -gt 0 ]]; do
     --profile) PROFILE="$2"; shift 2 ;;
     --target-root) TARGET_ROOT="$2"; shift 2 ;;
     --skip-runtime-freshness-gate) SKIP_RUNTIME_FRESHNESS_GATE="true"; shift ;;
+    --deep) DEEP="true"; shift ;;
     *) echo "Unknown arg: $1"; exit 1 ;;
   esac
 done
@@ -321,6 +323,7 @@ run_runtime_coherence_gate() {
 echo "=== VCO Codex Health Check ==="
 echo "Target: ${TARGET_ROOT}"
 echo "SkipRuntimeFreshnessGate: ${SKIP_RUNTIME_FRESHNESS_GATE}"
+echo "Deep: ${DEEP}"
 
 runtime_target_rel="skills/vibe"
 repo_governance_path="${SCRIPT_DIR}/config/version-governance.json"
@@ -383,6 +386,33 @@ check_path "mcp template" "${TARGET_ROOT}/mcp/servers.template.json"
 run_runtime_freshness_gate
 validate_runtime_receipt
 run_runtime_coherence_gate
+
+if command -v npm >/dev/null 2>&1; then
+  echo "[OK] npm"
+  PASS=$((PASS+1))
+else
+  echo "[WARN] npm not found (needed for claude-flow)"
+  WARN=$((WARN+1))
+fi
+
+if [[ "${DEEP}" == "true" ]]; then
+  doctor_path="${SCRIPT_DIR}/scripts/verify/vibe-bootstrap-doctor-gate.ps1"
+  if [[ ! -f "${doctor_path}" ]]; then
+    echo "[FAIL] vibe bootstrap doctor gate -> ${doctor_path}"
+    FAIL=$((FAIL+1))
+  elif ! command -v pwsh >/dev/null 2>&1; then
+    echo "[WARN] vibe bootstrap doctor gate skipped because pwsh is not available in this shell environment."
+    WARN=$((WARN+1))
+  else
+    if pwsh -NoProfile -File "${doctor_path}" -TargetRoot "${TARGET_ROOT}" -WriteArtifacts; then
+      echo "[OK] vibe bootstrap doctor gate"
+      PASS=$((PASS+1))
+    else
+      echo "[FAIL] vibe bootstrap doctor gate"
+      FAIL=$((FAIL+1))
+    fi
+  fi
+fi
 
 echo "Result: ${PASS} passed, ${FAIL} failed, ${WARN} warnings"
 [[ ${FAIL} -eq 0 ]]

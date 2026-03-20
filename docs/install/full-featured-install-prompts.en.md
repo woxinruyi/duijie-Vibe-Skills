@@ -25,7 +25,7 @@ Copy:
 
 ```text
 Please install the current repository using the VibeSkills recommended full-featured path, while staying strictly truth-first.
-
+Repository address: https://github.com/foryourhealth111-pixel/Vibe-Skills
 1. Detect whether the current system is Windows or Linux.
 2. If it is Windows:
    - prefer `pwsh -File .\scripts\bootstrap\one-shot-setup.ps1`
@@ -58,6 +58,7 @@ Please install the current repository using the VibeSkills recommended full-feat
    - recommend `superpowers` and `hookify` first
    - do not require `everything-claude-code`, `claude-code-settings`, and `ralph-loop` on first install by default
 11. Do not modify runtime logic during this flow; only install, check, and summarize.
+> Reminder: Do not directly reuse repository example values ​​for AI-powered intelligent governance layer configurations. When enabling this layer, users must provide and confirm the `url`, `apikey`, and `model` themselves. If AI assists in installation or generating the configuration, the prompt should clearly remind users to fill in these three items before continuing to write the configuration.
 ```
 
 ## Windows Prompt
@@ -71,7 +72,7 @@ Copy:
 
 ```text
 Please install the current repository using the Windows recommended full-featured path.
-
+Repository address: https://github.com/foryourhealth111-pixel/Vibe-Skills
 Requirements:
 
 1. Prefer `pwsh` and run:
@@ -89,6 +90,7 @@ Requirements:
 6. Follow the current host-plugin default policy:
    - recommend `superpowers` and `hookify` first
    - do not require `everything-claude-code`, `claude-code-settings`, and `ralph-loop` on first install by default
+> Reminder: Do not directly reuse repository example values ​​for AI-powered intelligent governance layer configurations. When enabling this layer, users must provide and confirm the `url`, `apikey`, and `model` themselves. If AI assists in installation or generating the configuration, the prompt should clearly remind users to fill in these three items before continuing to write the configuration.
 ```
 
 ## Linux Prompt
@@ -102,7 +104,7 @@ Copy:
 
 ```text
 Please install the current repository using the Linux recommended full-featured path, and first determine whether this Linux environment has `pwsh`.
-
+Repository address: https://github.com/foryourhealth111-pixel/Vibe-Skills
 Requirements:
 
 1. Check whether `pwsh` is available.
@@ -122,15 +124,10 @@ Requirements:
    - recommend `superpowers` and `hookify` first
    - do not require `everything-claude-code`, `claude-code-settings`, and `ralph-loop` on first install by default
 7. If the result is `manual_actions_pending`, list the remaining manual actions instead of calling the install failed.
+> Reminder: Do not directly reuse repository example values ​​for AI-powered intelligent governance layer configurations. When enabling this layer, users must provide and confirm the `url`, `apikey`, and `model` themselves. If AI assists in installation or generating the configuration, the prompt should clearly remind users to fill in these three items before continuing to write the configuration.
 ```
 
-## Short Prompt For New Users
 
-If you want a one-line version for onboarding:
-
-```text
-Please install this repository using the strongest recommended VibeSkills full-featured path for the current platform: auto-detect Windows vs Linux, run the one-shot bootstrap and deep doctor, report `fully_ready` vs `manual_actions_pending` vs `core_install_incomplete` truthfully, do not pretend host plugins/MCP/provider secrets were auto-installed, and follow the default host-plugin policy of recommending `superpowers` and `hookify` first without requiring all five host plugins on day one.
-```
 
 ## Suggested README / Community Framing
 

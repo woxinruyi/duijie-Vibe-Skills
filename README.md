@@ -278,6 +278,7 @@ graph LR
 ⚠️ **调用说明**：为保证通用代理的适配性，本项目采用 **Skills 格式架构**。请通过宿主环境的 Skills 调用方式唤起，**不要**将其作为独立命令行程序直接运行。
 * 在 **Claude Code** 中，输入：`/vibe`
 * 在 **Codex** 中，输入：`$vibe`
+* 使用方法便是如同调用skills一样调用，如codex中为：我希望你设计一个XXXX $vibe 。如Claude code中为，我希望你能设计一个XXX /vibe。然后每轮都要输入显示的vibe调用（保证每轮都在vibeskills的治理下），如：我希望按照这个计划，完成后续的任务 $vibe.
 
 ### 📚 导航与指引
 

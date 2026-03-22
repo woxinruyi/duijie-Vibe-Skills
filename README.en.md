@@ -19,7 +19,6 @@
     </a>
   </p>
 
-
   <p align="center">
     <img src="https://komarev.com/ghpvc/?username=vibe-skills-foryourhealth&label=NODES%20ACTIVE&color=0078d7&style=flat-square" alt="Visitors">
     <img src="https://img.shields.io/badge/Architecture-VCO_Runtime-orange?style=flat-square" alt="Arch">
@@ -284,7 +283,8 @@ We know that building in isolation cannot keep up with the speed of the AI era. 
 
 - In **Claude Code**, type: `/vibe`
 - In **Codex**, type: `$vibe`
-- The usage is the same as calling skills, such as in Codex: "I want you to design a XXXX $vibe". In Claude Code, it would be: "I want you to design a XXX /vibe". Then, in each round, you need to input the displayed vibe call (ensuring each round is under the management of vibeskills), such as: "I want to complete the subsequent tasks according to this plan $vibe".
+- The usage is the same as calling skills, such as in Codex: "I want you to design a XXXX $vibe". In Claude Code, it would be: "I want you to design a XXX /vibe".
+- **Recommended practice**: if you want every follow-up turn to clearly remain inside the VibeSkills governed workflow, keep explicitly appending `$vibe` or `/vibe` in each turn. If a turn does not explicitly include the invocation syntax, it should not be advertised as "still explicitly locked into the vibe runtime" for that turn.
 
 ### 🧭 How the `M / L / XL` execution grades are designed
 
@@ -337,6 +337,7 @@ I want you to clarify the requirements first, then make a plan and implement it 
 ```
 
 The point of an explicit invocation is to tell the host that this task should enter the unified `vibe` governed runtime.
+If you want follow-up turns such as execution, revision, or plan continuation to keep the same public governance semantics, the recommended practice is to explicitly invoke it again in those turns.
 After that, the runtime decides the grade by default; if the user explicitly signals an `L` or `XL` workflow preference in the task, the router can take that as an execution hint.
 
 ### 📚 Navigation and guides

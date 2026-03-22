@@ -290,7 +290,8 @@ graph LR
 
 - 在 **Claude Code** 中，输入：`/vibe`
 - 在 **Codex** 中，输入：`$vibe`
-- 使用方法便是如同调用skills一样调用，如codex中为：我希望你设计一个XXXX $vibe 。如Claude code中为，我希望你能设计一个XXX /vibe。然后每轮都要输入显示的vibe调用（保证每轮都在vibeskills的治理下），如：我希望按照这个计划，完成后续的任务 $vibe.
+- 使用方法便是如同调用 skills 一样调用，如 Codex 中为：我希望你设计一个 XXXX $vibe。如 Claude Code 中为：我希望你能设计一个 XXX /vibe。
+- **推荐做法**：如果你希望后续每一轮都明确继续处在 VibeSkills 治理流程里，就在每一轮继续显式带上 `$vibe` 或 `/vibe`。如果这一轮不显式写出调用语法，就不把它宣传成“这一轮仍然被明确锁定在 vibe runtime 中”。
 
 ### 🧭 `M / L / XL` 执行级别是怎么设计的
 
@@ -343,6 +344,7 @@ I want you to clarify the requirements first, then make a plan and implement it 
 ```
 
 显式调用的作用是告诉宿主：这次任务应进入 `vibe` 的统一治理运行时。
+如果你想让“继续执行、继续修订、继续按计划推进”这些后续轮次也保持同样的公开治理语义，推荐在这些轮次里继续显式调用。
 进入后默认由运行时内部路由决定级别；如果用户在任务里显式写了 `L` 或 `XL` 级工作流偏好，系统会把它作为路由提示一起考虑。
 
 ### 📚 导航与指引

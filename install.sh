@@ -224,6 +224,70 @@ if [[ -z "${TARGET_ROOT}" ]]; then
 fi
 assert_target_root_matches_host_intent "${TARGET_ROOT}" "${HOST_ID}"
 
+resolve_codex_duplicate_skill_root() {
+  if [[ "${HOST_ID}" != "codex" ]]; then
+    return 1
+  fi
+
+  local leaf=""
+  leaf="$(basename "${TARGET_ROOT}")"
+  leaf="$(printf '%s' "${leaf}" | tr '[:upper:]' '[:lower:]')"
+  if [[ "${leaf}" != ".codex" ]]; then
+    return 1
+  fi
+
+  local parent=""
+  parent="$(safe_parent_dir "${TARGET_ROOT}")"
+  if [[ -z "${parent}" ]]; then
+    return 1
+  fi
+
+  printf '%s' "${parent}/.agents/skills/vibe"
+}
+
+test_vibe_skill_dir() {
+  local root="${1:-}"
+  local skill_md="${root}/SKILL.md"
+  [[ -f "${skill_md}" ]] || return 1
+  if grep -Eq '^[[:space:]]*name:[[:space:]]*vibe[[:space:]]*$' "${skill_md}"; then
+    return 0
+  fi
+  return 1
+}
+
+quarantine_codex_duplicate_skill_surface() {
+  local duplicate_root=""
+  duplicate_root="$(resolve_codex_duplicate_skill_root || true)"
+  if [[ -z "${duplicate_root}" || ! -d "${duplicate_root}" ]]; then
+    return 0
+  fi
+
+  local target_skill_root="${TARGET_ROOT}/skills/vibe"
+  [[ -d "${target_skill_root}" ]] || return 0
+
+  local duplicate_real=""
+  local target_real=""
+  duplicate_real="$(cd "${duplicate_root}" 2>/dev/null && pwd || true)"
+  target_real="$(cd "${target_skill_root}" 2>/dev/null && pwd || true)"
+  if [[ -n "${duplicate_real}" && -n "${target_real}" && "${duplicate_real}" == "${target_real}" ]]; then
+    return 0
+  fi
+
+  if ! test_vibe_skill_dir "${duplicate_root}"; then
+    echo "[FAIL] Duplicate Codex-discovered skill surface exists at ${duplicate_root}, but it is not a recognizable vibe skill copy." >&2
+    echo "[FAIL] Move it out of .agents/skills manually before using Codex with the installed ~/.codex/skills/vibe lane." >&2
+    return 1
+  fi
+
+  local agents_root=""
+  agents_root="$(dirname "$(dirname "${duplicate_root}")")"
+  local quarantine_root="${agents_root}/skills-disabled"
+  local quarantine_path="${quarantine_root}/vibe.codex-duplicate-$(date +%Y%m%dT%H%M%S)"
+  mkdir -p "${quarantine_root}"
+  mv "${duplicate_root}" "${quarantine_path}"
+  echo "[WARN] Quarantined duplicate Codex-discovered vibe skill: ${duplicate_root} -> ${quarantine_path}"
+}
+
 CANONICAL_SKILLS_ROOT="$(safe_parent_dir "${SCRIPT_DIR}")"
 WORKSPACE_ROOT="$(safe_parent_dir "${CANONICAL_SKILLS_ROOT}")"
 WORKSPACE_SKILLS_ROOT=""
@@ -608,6 +672,7 @@ elif [[ ${#EXTERNAL_FALLBACK_USED[@]} -gt 0 ]]; then
   echo "[WARN] External fallback skills were used (non-reproducible install): ${uniq_fallback}"
 fi
 
+quarantine_codex_duplicate_skill_surface
 run_runtime_freshness_gate
 
 echo "Install done. Run: bash check.sh --profile ${PROFILE} --target-root ${TARGET_ROOT}"

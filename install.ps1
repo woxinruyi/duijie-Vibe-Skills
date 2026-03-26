@@ -134,7 +134,84 @@ function Copy-DirContent {
     return
   }
   New-Item -ItemType Directory -Force -Path $Destination | Out-Null
-  Copy-Item -Path (Join-Path $Source '*') -Destination $Destination -Recurse -Force
+    Copy-Item -Path (Join-Path $Source '*') -Destination $Destination -Recurse -Force
+}
+
+function Resolve-CodexDuplicateSkillRoot {
+  param(
+    [string]$TargetRoot,
+    [string]$HostId
+  )
+
+  if ([string]$HostId -ne 'codex') {
+    return $null
+  }
+
+  $leaf = (Split-Path -Path $TargetRoot -Leaf).ToLowerInvariant()
+  if ($leaf -ne '.codex') {
+    return $null
+  }
+
+  $parent = Get-VgoParentPath -Path $TargetRoot
+  if ([string]::IsNullOrWhiteSpace($parent)) {
+    return $null
+  }
+
+  return (Join-Path $parent '.agents\skills\vibe')
+}
+
+function Test-VibeSkillDirectory {
+  param([string]$Path)
+
+  if ([string]::IsNullOrWhiteSpace($Path)) {
+    return $false
+  }
+
+  $skillMd = Join-Path $Path 'SKILL.md'
+  if (-not (Test-Path -LiteralPath $skillMd)) {
+    return $false
+  }
+
+  $lines = Get-Content -LiteralPath $skillMd -TotalCount 20 -Encoding UTF8
+  return [bool](@($lines | Where-Object { $_ -match '^\s*name:\s*vibe\s*$' }).Count -gt 0)
+}
+
+function Invoke-CodexDuplicateSkillQuarantine {
+  param(
+    [string]$TargetRoot,
+    [string]$HostId
+  )
+
+  $duplicateRoot = Resolve-CodexDuplicateSkillRoot -TargetRoot $TargetRoot -HostId $HostId
+  if ([string]::IsNullOrWhiteSpace($duplicateRoot) -or -not (Test-Path -LiteralPath $duplicateRoot -PathType Container)) {
+    return
+  }
+
+  $targetSkillRoot = Join-Path $TargetRoot 'skills\vibe'
+  if (-not (Test-Path -LiteralPath $targetSkillRoot -PathType Container)) {
+    return
+  }
+
+  $duplicateFull = [System.IO.Path]::GetFullPath($duplicateRoot)
+  $targetFull = [System.IO.Path]::GetFullPath($targetSkillRoot)
+  if ($duplicateFull -eq $targetFull) {
+    return
+  }
+
+  if (-not (Test-VibeSkillDirectory -Path $duplicateRoot)) {
+    throw "Duplicate Codex-discovered skill surface exists at '$duplicateRoot', but it is not a recognizable vibe skill copy. Move it out of .agents/skills manually."
+  }
+
+  $agentsHome = Get-VgoParentPath -Path (Get-VgoParentPath -Path $duplicateRoot)
+  if ([string]::IsNullOrWhiteSpace($agentsHome)) {
+    throw "Unable to resolve .agents home for duplicate skill surface: $duplicateRoot"
+  }
+
+  $quarantineRoot = Join-Path $agentsHome 'skills-disabled'
+  $quarantinePath = Join-Path $quarantineRoot ("vibe.codex-duplicate-" + (Get-Date -Format 'yyyyMMddTHHmmss'))
+  New-Item -ItemType Directory -Force -Path $quarantineRoot | Out-Null
+  Move-Item -LiteralPath $duplicateRoot -Destination $quarantinePath
+  Write-Warning ("Quarantined duplicate Codex-discovered vibe skill: {0} -> {1}" -f $duplicateRoot, $quarantinePath)
 }
 function Ensure-SkillPresent {
   param(
@@ -362,6 +439,7 @@ if ($StrictOffline) {
 } elseif ($externalFallbackUsed.Count -gt 0) {
   Write-Warning ("External fallback skills were used (non-reproducible install): " + (($externalFallbackUsed | Select-Object -Unique) -join ", "))
 }
+Invoke-CodexDuplicateSkillQuarantine -TargetRoot $TargetRoot -HostId $HostId
 Invoke-InstalledRuntimeFreshnessGate -RepoRoot $RepoRoot -TargetRoot $TargetRoot -SkipGate:$SkipRuntimeFreshnessGate
 Write-Host ""
 Write-Host "Installation complete." -ForegroundColor Green

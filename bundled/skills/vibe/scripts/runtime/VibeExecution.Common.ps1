@@ -34,6 +34,15 @@ function Invoke-VibeCapturedProcess {
     $startInfo.RedirectStandardOutput = $true
     $startInfo.RedirectStandardError = $true
     $startInfo.CreateNoWindow = $true
+    $utf8NoBom = [System.Text.UTF8Encoding]::new($false)
+    try {
+        $startInfo.StandardOutputEncoding = $utf8NoBom
+    } catch {
+    }
+    try {
+        $startInfo.StandardErrorEncoding = $utf8NoBom
+    } catch {
+    }
 
     $quotedArguments = foreach ($argument in @($Arguments)) {
         $text = [string]$argument
@@ -228,6 +237,32 @@ function Test-VibeTruthyEnvironmentValue {
     return @('1', 'true', 'yes', 'on') -contains $Value.Trim().ToLowerInvariant()
 }
 
+function Resolve-VibeProcessInvocationSpec {
+    param(
+        [Parameter(Mandatory)] [string]$CommandPath,
+        [string[]]$ArgumentList = @()
+    )
+
+    $normalizedCommandPath = if ([System.IO.Path]::IsPathRooted($CommandPath) -and (Test-Path -LiteralPath $CommandPath)) {
+        [System.IO.Path]::GetFullPath($CommandPath)
+    } else {
+        [string]$CommandPath
+    }
+    $extension = [System.IO.Path]::GetExtension($normalizedCommandPath).ToLowerInvariant()
+    if ($extension -eq '.ps1') {
+        $invocation = Get-VgoPowerShellFileInvocation -ScriptPath $normalizedCommandPath -ArgumentList $ArgumentList -NoProfile
+        return [pscustomobject]@{
+            command_path = [string]$invocation.host_path
+            arguments = @($invocation.arguments)
+        }
+    }
+
+    return [pscustomobject]@{
+        command_path = $normalizedCommandPath
+        arguments = @($ArgumentList)
+    }
+}
+
 function Resolve-VibeNativeSpecialistAdapter {
     param(
         [Parameter(Mandatory)] [string]$ScriptPath
@@ -244,6 +279,7 @@ function Resolve-VibeNativeSpecialistAdapter {
             policy = $policy
             adapter = $null
             command_path = $null
+            invocation_arguments_prefix = @()
         }
     }
 
@@ -259,6 +295,7 @@ function Resolve-VibeNativeSpecialistAdapter {
                 policy = $policy
                 adapter = $null
                 command_path = $null
+                invocation_arguments_prefix = @()
             }
         }
     }
@@ -282,6 +319,7 @@ function Resolve-VibeNativeSpecialistAdapter {
             policy = $policy
             adapter = $null
             command_path = $null
+            invocation_arguments_prefix = @()
         }
     }
 
@@ -306,10 +344,12 @@ function Resolve-VibeNativeSpecialistAdapter {
             policy = $policy
             adapter = $null
             command_path = $null
+            invocation_arguments_prefix = @()
         }
     }
 
     $commandPath = $null
+    $invocationArgumentsPrefix = @()
     $resolvedReason = $null
     if ($adapter.PSObject.Properties.Name -contains 'executable_env' -and -not [string]::IsNullOrWhiteSpace([string]$adapter.executable_env)) {
         $envCommand = [Environment]::GetEnvironmentVariable([string]$adapter.executable_env)
@@ -330,6 +370,10 @@ function Resolve-VibeNativeSpecialistAdapter {
     }
     if ([string]::IsNullOrWhiteSpace($commandPath)) {
         $resolvedReason = ("native_specialist_adapter_command_unavailable:{0}" -f [string]$adapter.command)
+    } else {
+        $invocationSpec = Resolve-VibeProcessInvocationSpec -CommandPath $commandPath -ArgumentList @()
+        $commandPath = [string]$invocationSpec.command_path
+        $invocationArgumentsPrefix = @($invocationSpec.arguments)
     }
 
     return [pscustomobject]@{
@@ -340,6 +384,7 @@ function Resolve-VibeNativeSpecialistAdapter {
         policy = $policy
         adapter = $adapter
         command_path = $commandPath
+        invocation_arguments_prefix = @($invocationArgumentsPrefix)
     }
 }
 
@@ -731,6 +776,9 @@ function Invoke-VibeSpecialistDispatchUnit {
     Write-VgoUtf8NoBomText -Path $beforeGitPath -Content ((@($beforeSnapshot.lines) -join [Environment]::NewLine) + [Environment]::NewLine)
 
     $arguments = @()
+    foreach ($item in @($adapterResolution.invocation_arguments_prefix)) {
+        $arguments += [string]$item
+    }
     foreach ($item in @($adapter.arguments_prefix)) {
         $arguments += [string]$item
     }

@@ -4,6 +4,8 @@ param(
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
+[Console]::OutputEncoding = [System.Text.UTF8Encoding]::new($false)
+$OutputEncoding = [Console]::OutputEncoding
 
 . (Join-Path $PSScriptRoot 'VibeRuntime.Common.ps1')
 . (Join-Path $PSScriptRoot 'VibeExecution.Common.ps1')
@@ -15,6 +17,7 @@ New-Item -ItemType Directory -Path $laneRoot -Force | Out-Null
 $laneKind = [string]$laneSpec.lane_kind
 $receiptPath = Join-Path $laneRoot 'lane-receipt.json'
 $notesPath = Join-Path $laneRoot 'lane-notes.md'
+$payloadPath = Join-Path $laneRoot 'lane-payload.json'
 $receipt = $null
 $resultPath = $null
 
@@ -143,10 +146,17 @@ switch ($laneKind) {
 }
 
 Write-VibeJsonArtifact -Path $receiptPath -Value $receipt
-
-[pscustomobject]@{
+$payload = [pscustomobject]@{
     lane_receipt_path = $receiptPath
     lane_notes_path = $notesPath
     lane_result_path = $resultPath
     receipt = $receipt
+}
+Write-VibeJsonArtifact -Path $payloadPath -Value $payload
+
+[pscustomobject]@{
+    lane_id = [string]$laneSpec.lane_id
+    lane_kind = $laneKind
+    status = if ($receipt) { [string]$receipt.status } else { '' }
+    payload_written = $true
 } | ConvertTo-Json -Depth 20 -Compress

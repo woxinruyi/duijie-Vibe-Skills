@@ -56,6 +56,7 @@ def run_governed_runtime(task: str, artifact_root: Path) -> dict[str, object]:
         cwd=REPO_ROOT,
         capture_output=True,
         text=True,
+        encoding="utf-8",
         check=True,
     )
     stdout = completed.stdout.strip()
@@ -115,6 +116,7 @@ def run_child_runtime(
         cwd=REPO_ROOT,
         capture_output=True,
         text=True,
+        encoding="utf-8",
         check=True,
         env={**os.environ, **(extra_env or {})},
     )

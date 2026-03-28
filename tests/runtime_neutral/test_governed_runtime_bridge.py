@@ -77,6 +77,7 @@ def resolve_python_command_spec_via_powershell(command_spec: str, path_entries: 
         cwd=REPO_ROOT,
         capture_output=True,
         text=True,
+        encoding="utf-8",
         check=True,
     )
     return json.loads(completed.stdout)
@@ -153,6 +154,7 @@ class GovernedRuntimeBridgeTests(unittest.TestCase):
                 cwd=REPO_ROOT,
                 capture_output=True,
                 text=True,
+                encoding="utf-8",
                 check=True,
             )
 
@@ -254,9 +256,9 @@ class GovernedRuntimeBridgeTests(unittest.TestCase):
             self.assertGreaterEqual(execute_receipt["specialist_dispatch_unit_count"], 1)
             self.assertIn("systematic-debugging", execute_receipt["specialist_skills"])
             self.assertEqual(execute_receipt["executed_unit_count"], execution_manifest["executed_unit_count"])
-            self.assertEqual("completed_with_failures", execution_manifest["status"])
+            self.assertEqual("completed", execution_manifest["status"])
             self.assertGreaterEqual(execution_manifest["successful_unit_count"], 2)
-            self.assertGreaterEqual(execution_manifest["failed_unit_count"], 1)
+            self.assertEqual(0, execution_manifest["failed_unit_count"])
             self.assertEqual("runtime", execution_manifest["proof_class"])
             self.assertTrue(Path(execution_manifest["plan_shadow"]["path"]).exists())
             self.assertEqual("vibe", execution_manifest["route_runtime_alignment"]["router_selected_skill"])
@@ -271,7 +273,7 @@ class GovernedRuntimeBridgeTests(unittest.TestCase):
                 execution_manifest["specialist_accounting"]["degraded_specialist_unit_count"], 1
             )
             self.assertGreaterEqual(execution_manifest["plan_shadow"]["specialist_dispatch_unit_count"], 1)
-            self.assertFalse(benchmark_proof["proof_passed"])
+            self.assertTrue(benchmark_proof["proof_passed"])
             self.assertGreaterEqual(benchmark_proof["executed_unit_count"], 2)
             self.assertEqual("runtime", benchmark_proof["proof_class"])
             self.assertTrue(Path(benchmark_proof["plan_shadow_path"]).exists())

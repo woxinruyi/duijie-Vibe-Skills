@@ -98,6 +98,7 @@ def run_runtime(
         cwd=REPO_ROOT,
         capture_output=True,
         text=True,
+        encoding="utf-8",
         check=True,
         env={**os.environ, **(extra_env or {})},
     )
@@ -377,8 +378,8 @@ class NativeExecutionTopologyTests(unittest.TestCase):
             self.assertEqual("explicitly_degraded", specialist_accounting["effective_execution_status"])
             self.assertEqual(0, int(specialist_accounting["executed_specialist_unit_count"]))
             self.assertGreaterEqual(int(specialist_accounting["degraded_specialist_unit_count"]), 1)
-            self.assertEqual("completed_with_failures", execution_manifest["status"])
-            self.assertGreaterEqual(int(execution_manifest["failed_unit_count"]), 1)
+            self.assertEqual("completed", execution_manifest["status"])
+            self.assertEqual(0, int(execution_manifest["failed_unit_count"]))
 
             degraded_units = list(specialist_accounting["degraded_specialist_units"])
             self.assertGreaterEqual(len(degraded_units), 1)

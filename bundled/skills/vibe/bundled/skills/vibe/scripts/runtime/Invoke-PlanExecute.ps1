@@ -82,6 +82,15 @@ function Start-VibeDelegatedLaneProcess {
     $startInfo.RedirectStandardError = $true
     $startInfo.CreateNoWindow = $true
     $startInfo.WorkingDirectory = Split-Path -Parent ([string]($LaneRuntime.spec_path))
+    $utf8NoBom = [System.Text.UTF8Encoding]::new($false)
+    try {
+        $startInfo.StandardOutputEncoding = $utf8NoBom
+    } catch {
+    }
+    try {
+        $startInfo.StandardErrorEncoding = $utf8NoBom
+    } catch {
+    }
 
     $quotedArguments = foreach ($argument in @($invocation.arguments)) {
         $text = [string]$argument
@@ -106,6 +115,7 @@ function Start-VibeDelegatedLaneProcess {
         process = $process
         stdout_path = $stdoutPath
         stderr_path = $stderrPath
+        payload_path = Join-Path ([string]($LaneRuntime.lane_root)) 'lane-payload.json'
         stdout_task = $process.StandardOutput.ReadToEndAsync()
         stderr_task = $process.StandardError.ReadToEndAsync()
     }
@@ -131,13 +141,29 @@ function Wait-VibeDelegatedLaneProcess {
     Write-VgoUtf8NoBomText -Path ([string]($Handle.stdout_path)) -Content $stdoutText
     Write-VgoUtf8NoBomText -Path ([string]($Handle.stderr_path)) -Content $stderrText
 
-    $payloadText = ($stdoutText -split "`r?`n" | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | Select-Object -Last 1)
-    if ([string]::IsNullOrWhiteSpace($payloadText)) {
-        throw ("Delegated lane process returned empty payload for {0}" -f ([string]($Handle.lane_id)))
+    $payload = $null
+    $payloadPath = if ($Handle.PSObject.Properties.Name -contains 'payload_path') { [string]($Handle.payload_path) } else { '' }
+    if (-not [string]::IsNullOrWhiteSpace($payloadPath) -and (Test-Path -LiteralPath $payloadPath)) {
+        try {
+            $payload = Get-Content -LiteralPath $payloadPath -Raw -Encoding UTF8 | ConvertFrom-Json
+        } catch {
+            throw ("Delegated lane process wrote unreadable payload for {0}: {1}" -f ([string]($Handle.lane_id)), $_.Exception.Message)
+        }
     }
-
-    $payload = $payloadText | ConvertFrom-Json
-    $laneReceipt = Get-Content -LiteralPath ([string]($payload.lane_receipt_path)) -Raw -Encoding UTF8 | ConvertFrom-Json
+    if ($null -eq $payload) {
+        $payloadText = ($stdoutText -split "`r?`n" | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | Select-Object -Last 1)
+        if ([string]::IsNullOrWhiteSpace($payloadText)) {
+            throw ("Delegated lane process returned empty payload for {0}" -f ([string]($Handle.lane_id)))
+        }
+        $payload = $payloadText | ConvertFrom-Json
+    }
+    $laneReceipt = if ($payload.lane_receipt_path -and (Test-Path -LiteralPath ([string]($payload.lane_receipt_path)))) {
+        Get-Content -LiteralPath ([string]($payload.lane_receipt_path)) -Raw -Encoding UTF8 | ConvertFrom-Json
+    } elseif ($payload.PSObject.Properties.Name -contains 'receipt' -and $null -ne $payload.receipt) {
+        $payload.receipt
+    } else {
+        throw ("Delegated lane process missing receipt payload for {0}" -f ([string]($Handle.lane_id)))
+    }
     $laneResult = if ($payload.lane_result_path -and (Test-Path -LiteralPath ([string]($payload.lane_result_path)))) {
         Get-Content -LiteralPath ([string]($payload.lane_result_path)) -Raw -Encoding UTF8 | ConvertFrom-Json
     } else {
@@ -310,6 +336,23 @@ function ConvertTo-VibeExecutedUnitReceipt {
         live_native_execution = if ($Outcome.lane_result -and $Outcome.lane_result.PSObject.Properties.Name -contains 'live_native_execution') { [bool]$Outcome.lane_result.live_native_execution } else { $false }
         degraded = if ($Outcome.lane_result -and $Outcome.lane_result.PSObject.Properties.Name -contains 'degraded') { [bool]$Outcome.lane_result.degraded } else { $false }
     }
+}
+
+function Test-VibeBlockingUnitReceipt {
+    param(
+        [Parameter(Mandatory)] [object]$UnitReceipt
+    )
+
+    if ([bool]$UnitReceipt.verification_passed) {
+        return $false
+    }
+    if ([bool]$UnitReceipt.timed_out) {
+        return $true
+    }
+    if ([string]$UnitReceipt.lane_kind -eq 'specialist_dispatch' -and [bool]$UnitReceipt.degraded -and -not [bool]$UnitReceipt.live_native_execution) {
+        return $false
+    }
+    return $true
 }
 
 function Resolve-VibeEffectiveSpecialistDispatch {
@@ -943,7 +986,7 @@ foreach ($topologyWave in @($executionTopology.waves)) {
             } elseif ([bool]$unitReceipt.timed_out) {
                 $timedOutUnitCount += 1
                 $failedUnitCount += 1
-            } else {
+            } elseif (Test-VibeBlockingUnitReceipt -UnitReceipt $unitReceipt) {
                 $failedUnitCount += 1
             }
 
@@ -965,6 +1008,7 @@ foreach ($topologyWave in @($executionTopology.waves)) {
             }
         }
 
+        $stepUnitReceipts = @($waveUnitReceipts | Where-Object { [string]$_.step_id -eq [string]$step.step_id })
         $stepReceipts += [pscustomobject]@{
             step_id = [string]$step.step_id
             execution_mode = $stepMode
@@ -972,15 +1016,15 @@ foreach ($topologyWave in @($executionTopology.waves)) {
             finished_at = (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
             planned_unit_count = @($step.units).Count
             executed_unit_count = @($stepOutcomes).Count
-            status = if (@($stepOutcomes | Where-Object { -not $_.lane_result.verification_passed }).Count -eq 0) { 'completed' } else { 'failed' }
-            units = @($waveUnitReceipts | Where-Object { [string]$_.step_id -eq [string]$step.step_id })
+            status = if (@($stepUnitReceipts | Where-Object { Test-VibeBlockingUnitReceipt -UnitReceipt $_ }).Count -eq 0) { 'completed' } else { 'failed' }
+            units = @($stepUnitReceipts)
         }
     }
 
     $waveReceipts += [pscustomobject]@{
         wave_id = [string]$topologyWave.wave_id
         description = [string]$topologyWave.description
-        status = if (@($waveUnitReceipts | Where-Object { -not $_.verification_passed }).Count -eq 0) { 'completed' } else { 'failed' }
+        status = if (@($waveUnitReceipts | Where-Object { Test-VibeBlockingUnitReceipt -UnitReceipt $_ }).Count -eq 0) { 'completed' } else { 'failed' }
         started_at = $waveStartedAt
         finished_at = (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
         planned_unit_count = [int]$plannedWaveUnits

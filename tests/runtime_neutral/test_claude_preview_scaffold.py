@@ -12,6 +12,21 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 PREVIEW_FILE = 'settings.vibe.preview.json'
 
 
+def resolve_powershell() -> str | None:
+    candidates = [
+        shutil.which("pwsh"),
+        shutil.which("pwsh.exe"),
+        r"C:\Program Files\PowerShell\7\pwsh.exe",
+        r"C:\Program Files\PowerShell\7-preview\pwsh.exe",
+        shutil.which("powershell"),
+        shutil.which("powershell.exe"),
+    ]
+    for candidate in candidates:
+        if candidate and Path(candidate).exists():
+            return str(Path(candidate))
+    return None
+
+
 class ClaudePreviewScaffoldTests(unittest.TestCase):
     def setUp(self) -> None:
         self.tempdir = tempfile.TemporaryDirectory()
@@ -55,10 +70,11 @@ class ClaudePreviewScaffoldTests(unittest.TestCase):
         self.assertIn('temporarily frozen', payload['message'])
 
     def test_powershell_scaffold_preserves_existing_settings_and_writes_preview_file(self) -> None:
-        if shutil.which('pwsh') is None:
-            self.skipTest('pwsh not available')
+        powershell = resolve_powershell()
+        if powershell is None:
+            self.skipTest('PowerShell executable not available in PATH')
         cmd = [
-            'pwsh',
+            powershell,
             '-NoProfile',
             '-File',
             str(REPO_ROOT / 'scripts' / 'bootstrap' / 'scaffold-claude-preview.ps1'),

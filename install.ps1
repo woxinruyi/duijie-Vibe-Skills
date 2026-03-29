@@ -485,4 +485,19 @@ Invoke-CodexDuplicateSkillQuarantine -TargetRoot $TargetRoot -HostId $HostId
 Invoke-InstalledRuntimeFreshnessGate -RepoRoot $RepoRoot -TargetRoot $TargetRoot -SkipGate:$SkipRuntimeFreshnessGate
 Write-Host ""
 Write-Host "Installation complete." -ForegroundColor Green
-Write-Host "Run: powershell -ExecutionPolicy Bypass -File .\check.ps1 -Profile $Profile -TargetRoot `"$TargetRoot`""
+$checkShellPath = Get-VgoPowerShellCommand
+$checkShellLeaf = [System.IO.Path]::GetFileName($checkShellPath).ToLowerInvariant()
+$checkCommandParts = @($checkShellLeaf, '-NoProfile')
+if ($checkShellLeaf -like 'powershell*') {
+  $checkCommandParts += @('-ExecutionPolicy', 'Bypass')
+}
+$checkCommandParts += @('-File', '.\check.ps1', '-Profile', $Profile, '-TargetRoot', $TargetRoot)
+$checkCommand = ($checkCommandParts | ForEach-Object {
+  $text = [string]$_
+  if ($text -match '\s') {
+    '"' + ($text -replace '"', '\"') + '"'
+  } else {
+    $text
+  }
+}) -join ' '
+Write-Host ("Run: {0}" -f $checkCommand)

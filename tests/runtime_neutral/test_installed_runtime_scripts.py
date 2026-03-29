@@ -11,6 +11,21 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
 
+def resolve_powershell() -> str | None:
+    candidates = [
+        shutil.which("pwsh"),
+        shutil.which("pwsh.exe"),
+        r"C:\Program Files\PowerShell\7\pwsh.exe",
+        r"C:\Program Files\PowerShell\7-preview\pwsh.exe",
+        shutil.which("powershell"),
+        shutil.which("powershell.exe"),
+    ]
+    for candidate in candidates:
+        if candidate and Path(candidate).exists():
+            return str(Path(candidate))
+    return None
+
+
 class InstalledRuntimeScriptsTests(unittest.TestCase):
     def setUp(self) -> None:
         self.tempdir = tempfile.TemporaryDirectory()
@@ -215,11 +230,12 @@ class InstalledRuntimeScriptsTests(unittest.TestCase):
         self.assertNotIn("rm -rf", install_script)
 
     def test_installed_powershell_scripts_work_without_repo_level_adapter_registry(self) -> None:
-        if shutil.which("pwsh") is None:
-            self.skipTest("pwsh not available")
+        powershell = resolve_powershell()
+        if powershell is None:
+            self.skipTest("PowerShell executable not available in PATH")
 
         install_cmd = [
-            "pwsh",
+            powershell,
             "-NoProfile",
             "-ExecutionPolicy",
             "Bypass",
@@ -237,7 +253,7 @@ class InstalledRuntimeScriptsTests(unittest.TestCase):
 
         installed_root = self.target_root / "skills" / "vibe"
         check_cmd = [
-            "pwsh",
+            powershell,
             "-NoProfile",
             "-ExecutionPolicy",
             "Bypass",
@@ -256,8 +272,9 @@ class InstalledRuntimeScriptsTests(unittest.TestCase):
         self.assertNotIn("VGO adapter registry not found", check_result.stderr)
 
     def test_powershell_install_quarantines_legacy_agents_duplicate_for_default_codex_root(self) -> None:
-        if shutil.which("pwsh") is None:
-            self.skipTest("pwsh not available")
+        powershell = resolve_powershell()
+        if powershell is None:
+            self.skipTest("PowerShell executable not available in PATH")
 
         home_root = self.root / "home"
         target_root = home_root / ".codex"
@@ -273,7 +290,7 @@ class InstalledRuntimeScriptsTests(unittest.TestCase):
         env["HOME"] = str(home_root)
 
         install_cmd = [
-            "pwsh",
+            powershell,
             "-NoProfile",
             "-ExecutionPolicy",
             "Bypass",
@@ -296,8 +313,9 @@ class InstalledRuntimeScriptsTests(unittest.TestCase):
         self.assertTrue((quarantined[0] / "SKILL.md").exists())
 
     def test_powershell_check_fails_when_legacy_agents_duplicate_is_reintroduced(self) -> None:
-        if shutil.which("pwsh") is None:
-            self.skipTest("pwsh not available")
+        powershell = resolve_powershell()
+        if powershell is None:
+            self.skipTest("PowerShell executable not available in PATH")
 
         home_root = self.root / "home"
         target_root = home_root / ".codex"
@@ -307,7 +325,7 @@ class InstalledRuntimeScriptsTests(unittest.TestCase):
         env["HOME"] = str(home_root)
 
         install_cmd = [
-            "pwsh",
+            powershell,
             "-NoProfile",
             "-ExecutionPolicy",
             "Bypass",
@@ -331,7 +349,7 @@ class InstalledRuntimeScriptsTests(unittest.TestCase):
 
         installed_root = target_root / "skills" / "vibe"
         check_cmd = [
-            "pwsh",
+            powershell,
             "-NoProfile",
             "-ExecutionPolicy",
             "Bypass",

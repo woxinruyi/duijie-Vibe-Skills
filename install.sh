@@ -348,8 +348,8 @@ else:
     print(value)
 PY
     return $?
-  elif command -v pwsh >/dev/null 2>&1; then
-    pwsh -NoProfile -Command '
+  elif pick_powershell >/dev/null 2>&1; then
+    run_powershell_command '
 param([string]$Path,[string]$Expr)
 $raw = Get-Content -LiteralPath $Path -Raw -Encoding UTF8
 $value = $raw | ConvertFrom-Json
@@ -391,6 +391,53 @@ pick_python() {
     return 0
   fi
   return 1
+}
+
+pick_powershell() {
+  local candidate resolved=""
+  for candidate in pwsh pwsh.exe powershell powershell.exe; do
+    if resolved="$(command -v "${candidate}" 2>/dev/null)"; then
+      if [[ -n "${resolved}" ]]; then
+        printf '%s' "${resolved}"
+        return 0
+      fi
+    fi
+  done
+  return 1
+}
+
+run_powershell_command() {
+  local command_text="$1"
+  shift
+  local shell_path=""
+  shell_path="$(pick_powershell || true)"
+  [[ -n "${shell_path}" ]] || return 127
+
+  local leaf="${shell_path##*/}"
+  leaf="$(printf '%s' "${leaf}" | tr '[:upper:]' '[:lower:]')"
+  local cmd=("${shell_path}" "-NoProfile")
+  if [[ "${leaf}" == "powershell" || "${leaf}" == "powershell.exe" ]]; then
+    cmd+=("-ExecutionPolicy" "Bypass")
+  fi
+  cmd+=("-Command" "${command_text}")
+  "${cmd[@]}" "$@"
+}
+
+run_powershell_file() {
+  local script_path="$1"
+  shift
+  local shell_path=""
+  shell_path="$(pick_powershell || true)"
+  [[ -n "${shell_path}" ]] || return 127
+
+  local leaf="${shell_path##*/}"
+  leaf="$(printf '%s' "${leaf}" | tr '[:upper:]' '[:lower:]')"
+  local cmd=("${shell_path}" "-NoProfile")
+  if [[ "${leaf}" == "powershell" || "${leaf}" == "powershell.exe" ]]; then
+    cmd+=("-ExecutionPolicy" "Bypass")
+  fi
+  cmd+=("-File" "${script_path}")
+  "${cmd[@]}" "$@"
 }
 
 adapter_query() {
@@ -442,11 +489,11 @@ run_runtime_freshness_gate() {
   if run_runtime_neutral_freshness_gate; then
     :
   elif [[ $? -eq 127 ]]; then
-    if ! command -v pwsh >/dev/null 2>&1; then
-      echo "[WARN] runtime freshness gate skipped: neither Python runtime-neutral gate nor pwsh fallback is available."
+    if ! pick_powershell >/dev/null 2>&1; then
+      echo "[WARN] runtime freshness gate skipped: neither Python runtime-neutral gate nor a PowerShell fallback is available."
       return 0
     fi
-    pwsh -NoProfile -File "${gate_path}" -TargetRoot "${TARGET_ROOT}" -WriteReceipt
+    run_powershell_file "${gate_path}" -TargetRoot "${TARGET_ROOT}" -WriteReceipt
   else
     return 1
   fi
@@ -716,12 +763,12 @@ if [[ "${STRICT_OFFLINE}" == "true" ]]; then
     echo "[FAIL] StrictOffline requested, but offline gate script is missing: ${OFFLINE_GATE}"
     exit 1
   fi
-  if ! command -v pwsh >/dev/null 2>&1; then
-    echo "[FAIL] StrictOffline requires pwsh to run offline gate"
+  if ! pick_powershell >/dev/null 2>&1; then
+    echo "[FAIL] StrictOffline requires an available PowerShell host to run the offline gate"
     exit 1
   fi
 
-  pwsh -NoProfile -File "${OFFLINE_GATE}" \
+  run_powershell_file "${OFFLINE_GATE}" \
     -SkillsRoot "${TARGET_ROOT}/skills" \
     -PackManifestPath "${SCRIPT_DIR}/config/pack-manifest.json" \
     -SkillsLockPath "${SCRIPT_DIR}/config/skills-lock.json"

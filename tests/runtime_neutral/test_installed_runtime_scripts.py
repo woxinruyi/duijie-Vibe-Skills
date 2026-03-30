@@ -342,6 +342,55 @@ class InstalledRuntimeScriptsTests(unittest.TestCase):
         install_script = (self.target_root / "skills" / "vibe" / "install.sh").read_text(encoding="utf-8")
         self.assertNotIn("rm -rf", install_script)
 
+    def test_shell_install_repairs_legacy_opencode_config_without_touching_user_settings(self) -> None:
+        self.target_root.mkdir(parents=True, exist_ok=True)
+        settings_path = self.target_root / "opencode.json"
+        settings_path.write_text(
+            json.dumps(
+                {
+                    "$schema": "https://opencode.ai/config.json",
+                    "mcp": {
+                        "playwright": {
+                            "enabled": True,
+                            "type": "local",
+                            "command": ["npx", "@playwright/mcp@latest"],
+                        }
+                    },
+                    "vibeskills": {
+                        "host_id": "opencode",
+                        "managed": True,
+                        "commands_root": str((self.target_root / "commands").resolve()),
+                        "agents_root": str((self.target_root / "agents").resolve()),
+                    },
+                },
+                indent=2,
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+
+        result = subprocess.run(
+            [
+                "bash",
+                str(REPO_ROOT / "install.sh"),
+                "--host",
+                "opencode",
+                "--profile",
+                "full",
+                "--target-root",
+                str(self.target_root),
+            ],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+
+        self.assertIn("Install done.", result.stdout)
+        repaired = json.loads(settings_path.read_text(encoding="utf-8"))
+        self.assertNotIn("vibeskills", repaired)
+        self.assertIn("mcp", repaired)
+        self.assertTrue((self.target_root / "opencode.json.example").exists())
+
     def test_shell_install_require_closed_ready_fails_without_bridge_command(self) -> None:
         for host_id, _env_name in STRICT_READY_HOSTS:
             with self.subTest(host_id=host_id):

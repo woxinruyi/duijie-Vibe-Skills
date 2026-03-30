@@ -5,6 +5,7 @@ import os
 import stat
 import shutil
 import tempfile
+from datetime import datetime
 from pathlib import Path
 
 REQUIRED_CORE = [
@@ -43,6 +44,55 @@ HOST_BRIDGE_COMMAND_ENV = {
     "opencode": "VGO_OPENCODE_SPECIALIST_BRIDGE_COMMAND",
 }
 
+ledger_state = {
+    "created_paths": set(),
+    "managed_json_paths": set(),
+    "template_generated": set(),
+    "specialist_wrapper_paths": [],
+}
+
+
+def reset_ledger_state() -> None:
+    for key, value in ledger_state.items():
+        if isinstance(value, set):
+            value.clear()
+        elif isinstance(value, list):
+            value.clear()
+        else:
+            ledger_state[key] = type(value)()
+
+
+def track_created_path(path: Path | str) -> None:
+    try:
+        resolved = Path(path).resolve()
+    except FileNotFoundError:
+        resolved = Path(path)
+    ledger_state["created_paths"].add(str(resolved))
+
+
+def record_managed_json(path: Path) -> None:
+    try:
+        resolved = path.resolve()
+    except FileNotFoundError:
+        resolved = path
+    ledger_state["managed_json_paths"].add(str(resolved))
+
+
+def record_generated_from_template(path: Path) -> None:
+    try:
+        resolved = path.resolve()
+    except FileNotFoundError:
+        resolved = path
+    ledger_state["template_generated"].add(str(resolved))
+
+
+def record_specialist_wrapper(path: Path) -> None:
+    try:
+        resolved = str(path.resolve())
+    except FileNotFoundError:
+        resolved = str(path)
+    if resolved not in ledger_state["specialist_wrapper_paths"]:
+        ledger_state["specialist_wrapper_paths"].append(resolved)
 
 def detect_platform_tag() -> str:
     if os.name == "nt":
@@ -96,6 +146,7 @@ def copy_dir_replace(src: Path, dst: Path):
         if dst.exists():
             shutil.rmtree(dst)
         shutil.copytree(src, dst)
+        track_created_path(dst)
         return
 
     stage_root = Path(tempfile.mkdtemp(prefix="vgo-copy-tree-"))
@@ -105,6 +156,7 @@ def copy_dir_replace(src: Path, dst: Path):
         if dst.exists():
             shutil.rmtree(dst)
         shutil.copytree(staged, dst)
+        track_created_path(dst)
     finally:
         shutil.rmtree(stage_root, ignore_errors=True)
 
@@ -114,6 +166,7 @@ def copy_tree(src: Path, dst: Path):
         return
     children = list(src.iterdir())
     dst.mkdir(parents=True, exist_ok=True)
+    track_created_path(dst)
     for child in children:
         target = dst / child.name
         if child.is_dir():
@@ -122,6 +175,7 @@ def copy_tree(src: Path, dst: Path):
             if target.exists() and same_path(child, target):
                 continue
             shutil.copy2(child, target)
+            track_created_path(target)
 
 
 def copy_file(src: Path, dst: Path):
@@ -129,6 +183,7 @@ def copy_file(src: Path, dst: Path):
         return
     dst.parent.mkdir(parents=True, exist_ok=True)
     shutil.copy2(src, dst)
+    track_created_path(dst)
 
 
 def ensure_executable(path: Path):
@@ -321,6 +376,7 @@ def resolve_bridge_command(host_id: str) -> tuple[str | None, str | None]:
 def materialize_host_specialist_wrapper(target_root: Path, host_id: str, bridge_command: str | None):
     tools_root = target_root / ".vibeskills" / "bin"
     tools_root.mkdir(parents=True, exist_ok=True)
+    track_created_path(tools_root)
 
     wrapper_py = tools_root / f"{host_id}-specialist-wrapper.py"
     embedded_command = json.dumps(bridge_command or "")
@@ -345,6 +401,7 @@ def materialize_host_specialist_wrapper(target_root: Path, host_id: str, bridge_
         encoding="utf-8",
     )
     ensure_executable(wrapper_py)
+    record_specialist_wrapper(wrapper_py)
 
     platform_tag = detect_platform_tag()
     if platform_tag == "windows":
@@ -385,6 +442,7 @@ def materialize_host_specialist_wrapper(target_root: Path, host_id: str, bridge_
             encoding="utf-8",
         )
         ensure_executable(launcher)
+    record_specialist_wrapper(launcher)
 
     return {
         "platform": platform_tag,
@@ -413,6 +471,78 @@ def merge_json_object(path: Path, patch: dict):
     write_json_file(path, merged)
 
 
+def path_points_inside_target_root(value: object, target_root: Path) -> bool:
+    if not isinstance(value, str) or not value.strip():
+        return False
+    candidate = Path(value.strip()).expanduser()
+    if not candidate.is_absolute():
+        candidate = target_root / candidate
+    try:
+        candidate.resolve(strict=False).relative_to(target_root.resolve())
+        return True
+    except ValueError:
+        return False
+
+
+def is_owned_legacy_opencode_vibeskills_node(node: object, target_root: Path) -> bool:
+    if not isinstance(node, dict):
+        return False
+    host_id = str(node.get("host_id") or "").strip().lower()
+    if host_id and host_id != "opencode":
+        return False
+    if bool(node.get("managed", False)):
+        return True
+    for key in (
+        "commands_root",
+        "command_root_compat",
+        "agents_root",
+        "agent_root_compat",
+        "specialist_wrapper",
+    ):
+        if path_points_inside_target_root(node.get(key), target_root):
+            return True
+    return False
+
+
+def sanitize_legacy_opencode_config(target_root: Path) -> dict[str, object]:
+    settings_path = target_root / "opencode.json"
+    receipt: dict[str, object] = {
+        "path": str(settings_path.resolve()),
+        "status": "not-present",
+    }
+    if not settings_path.exists():
+        return receipt
+
+    try:
+        payload = json.loads(settings_path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        receipt["status"] = "parse-failed"
+        return receipt
+
+    if not isinstance(payload, dict):
+        receipt["status"] = "non-object"
+        return receipt
+
+    vibeskills_node = payload.get("vibeskills")
+    if vibeskills_node is None:
+        receipt["status"] = "already-clean"
+        return receipt
+    if not is_owned_legacy_opencode_vibeskills_node(vibeskills_node, target_root):
+        receipt["status"] = "foreign-node-preserved"
+        return receipt
+
+    next_payload = dict(payload)
+    del next_payload["vibeskills"]
+    if next_payload:
+        write_json_file(settings_path, next_payload)
+        receipt["status"] = "removed-owned-node"
+        receipt["preserved_keys"] = sorted(next_payload.keys())
+    else:
+        settings_path.unlink()
+        receipt["status"] = "removed-owned-node-and-deleted-empty-file"
+    return receipt
+
+
 def materialize_host_settings(target_root: Path, adapter: dict, wrapper_info: dict):
     host_id = adapter["id"]
     materialized = []
@@ -430,23 +560,8 @@ def materialize_host_settings(target_root: Path, adapter: dict, wrapper_info: di
             },
         )
         materialized.append(str(settings_path.resolve()))
-    elif host_id == "opencode":
-        settings_path = target_root / "opencode.json"
-        merge_json_object(
-            settings_path,
-            {
-                "vibeskills": {
-                    "host_id": host_id,
-                    "managed": True,
-                    "commands_root": str((target_root / "commands").resolve()),
-                    "command_root_compat": str((target_root / "command").resolve()),
-                    "agents_root": str((target_root / "agents").resolve()),
-                    "agent_root_compat": str((target_root / "agent").resolve()),
-                    "specialist_wrapper": wrapper_info["launcher_path"],
-                }
-            },
-        )
-        materialized.append(str(settings_path.resolve()))
+        record_managed_json(settings_path)
+        track_created_path(settings_path)
     elif host_id in {"openclaw", "windsurf"}:
         settings_path = target_root / ".vibeskills" / "host-settings.json"
         write_json_file(
@@ -461,6 +576,8 @@ def materialize_host_settings(target_root: Path, adapter: dict, wrapper_info: di
             },
         )
         materialized.append(str(settings_path.resolve()))
+        record_managed_json(settings_path)
+        track_created_path(settings_path)
     return materialized
 
 
@@ -578,6 +695,42 @@ def materialize_generated_nested_compatibility(governance: dict, installed_root:
             copy_dir_replace(src, nested_root / rel)
 
 
+def runtime_core_vibe_relpath(repo_root: Path) -> str:
+    packaging = load_json(repo_root / "config" / "runtime-core-packaging.json")
+    return packaging.get("canonical_vibe_mirror", {}).get("target_relpath", "skills/vibe")
+
+
+def write_install_ledger(
+    repo_root: Path,
+    target_root: Path,
+    adapter: dict,
+    mode: str,
+    profile: str,
+    canonical_vibe_rel: str,
+    external_fallback_used: list[str],
+):
+    ledger_path = target_root / ".vibeskills" / "install-ledger.json"
+    ledger_path.parent.mkdir(parents=True, exist_ok=True)
+    ledger = {
+        "schema_version": 1,
+        "host_id": adapter["id"],
+        "install_mode": mode,
+        "profile": profile,
+        "target_root": str(target_root.resolve()),
+        "runtime_root": str(target_root.resolve()),
+        "canonical_vibe_root": str((target_root / canonical_vibe_rel).resolve()),
+        "created_paths": sorted(ledger_state["created_paths"]),
+        "managed_json_paths": sorted(ledger_state["managed_json_paths"]),
+        "generated_from_template_if_absent": sorted(ledger_state["template_generated"]),
+        "specialist_wrapper_paths": ledger_state["specialist_wrapper_paths"],
+        "external_fallback_used": external_fallback_used,
+        "timestamp": datetime.utcnow().replace(microsecond=0).isoformat() + "Z",
+        "ownership_source": "install-ledger",
+    }
+    write_json_file(ledger_path, ledger)
+    track_created_path(ledger_path)
+
+
 def ensure_skill_present(target_root: Path, name: str, required: bool, allow_fallback: bool, fallback_sources, external_used, missing):
     skill_md = target_root / "skills" / name / "SKILL.md"
     if skill_md.exists():
@@ -600,6 +753,7 @@ def install_runtime_core(repo_root: Path, target_root: Path, profile: str, allow
     governance = load_json(repo_root / "config" / "version-governance.json")
     for rel in packaging["directories"]:
         (target_root / rel).mkdir(parents=True, exist_ok=True)
+        track_created_path(target_root / rel)
     for entry in packaging["copy_directories"]:
         copy_tree(repo_root / entry["source"], target_root / entry["target"])
         if entry["target"] == "skills":
@@ -669,13 +823,20 @@ def install_runtime_core(repo_root: Path, target_root: Path, profile: str, allow
 
 def install_codex_payload(repo_root: Path, target_root: Path):
     copy_tree(repo_root / "rules", target_root / "rules")
+    track_created_path(target_root / "rules")
     copy_tree(repo_root / "agents" / "templates", target_root / "agents" / "templates")
+    track_created_path(target_root / "agents" / "templates")
     copy_tree(repo_root / "mcp", target_root / "mcp")
+    track_created_path(target_root / "mcp")
     (target_root / "config").mkdir(parents=True, exist_ok=True)
+    track_created_path(target_root / "config")
     copy_file(repo_root / "config" / "plugins-manifest.codex.json", target_root / "config" / "plugins-manifest.codex.json")
     settings_path = target_root / "settings.json"
     if not settings_path.exists():
         copy_file(repo_root / "config" / "settings.template.codex.json", settings_path)
+        record_generated_from_template(settings_path)
+    track_created_path(settings_path)
+    record_managed_json(settings_path)
 
 
 def install_claude_guidance_payload(repo_root: Path, target_root: Path):
@@ -690,9 +851,13 @@ def install_opencode_guidance_payload(repo_root: Path, target_root: Path):
     example_config = repo_root / "config" / "opencode" / "opencode.json.example"
 
     copy_tree(commands_root, target_root / "commands")
+    track_created_path(target_root / "commands")
     copy_tree(commands_root, target_root / "command")
+    track_created_path(target_root / "command")
     copy_tree(agents_root, target_root / "agents")
+    track_created_path(target_root / "agents")
     copy_tree(agents_root, target_root / "agent")
+    track_created_path(target_root / "agent")
     if example_config.exists():
         copy_file(example_config, target_root / "opencode.json.example")
 
@@ -700,11 +865,14 @@ def install_runtime_core_mode_payload(repo_root: Path, target_root: Path):
     commands_root = repo_root / "commands"
     if commands_root.exists():
         copy_tree(commands_root, target_root / "global_workflows")
+        track_created_path(target_root / "global_workflows")
 
     mcp_template = repo_root / "mcp" / "servers.template.json"
     mcp_config = target_root / "mcp_config.json"
     if mcp_template.exists() and not mcp_config.exists():
         copy_file(mcp_template, mcp_config)
+        record_generated_from_template(mcp_config)
+    track_created_path(mcp_config)
 
 
 def main():
@@ -717,17 +885,22 @@ def main():
     parser.add_argument("--require-closed-ready", action="store_true")
     args = parser.parse_args()
 
+    reset_ledger_state()
+
     repo_root = Path(args.repo_root).resolve()
     target_root = Path(args.target_root).resolve()
     target_root.mkdir(parents=True, exist_ok=True)
+    track_created_path(target_root)
     adapter = resolve_adapter(repo_root, args.host)
     external_used = install_runtime_core(repo_root, target_root, args.profile, args.allow_external_skill_fallback)
     mode = adapter["install_mode"]
+    legacy_opencode_config_cleanup = None
     if mode == "governed":
         install_codex_payload(repo_root, target_root)
     elif mode == "preview-guidance":
         if adapter["id"] == "opencode":
             install_opencode_guidance_payload(repo_root, target_root)
+            legacy_opencode_config_cleanup = sanitize_legacy_opencode_config(target_root)
         elif adapter["id"] in {"claude-code", "cursor"}:
             install_claude_guidance_payload(repo_root, target_root)
         else:
@@ -747,6 +920,17 @@ def main():
             "Configure the host specialist bridge command first, then retry install."
         )
 
+    canonical_vibe_rel = runtime_core_vibe_relpath(repo_root)
+    write_install_ledger(
+        repo_root,
+        target_root,
+        adapter,
+        mode,
+        args.profile,
+        canonical_vibe_rel,
+        external_used,
+    )
+
     write_json(
         {
             "host_id": adapter["id"],
@@ -756,6 +940,7 @@ def main():
             "host_closure_path": str(closure_path),
             "host_closure_state": closure["host_closure_state"],
             "settings_materialized": closure["settings_materialized"],
+            "legacy_opencode_config_cleanup": legacy_opencode_config_cleanup,
             "specialist_wrapper_ready": bool(closure["specialist_wrapper"]["ready"]),
             "require_closed_ready_requested": bool(args.require_closed_ready),
             "require_closed_ready_effective": require_closed_ready_effective,

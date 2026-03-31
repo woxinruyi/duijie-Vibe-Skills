@@ -23,6 +23,24 @@ def write_json_file(path: Path, data: object):
     path.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 
+def should_remove_claude_pretooluse_hook_entry(
+    entry: dict,
+    *,
+    managed_hook_command: str,
+    managed_hook_description: str,
+) -> bool:
+    entry_hooks = entry.get("hooks")
+    entry_command = ""
+    if isinstance(entry_hooks, list) and entry_hooks:
+        first_hook = entry_hooks[0]
+        if isinstance(first_hook, dict):
+            entry_command = str(first_hook.get("command") or "").strip()
+    if managed_hook_command:
+        return bool(entry_command) and entry_command == managed_hook_command
+    description = str(entry.get("description") or "").strip()
+    return bool(managed_hook_description) and not entry_command and description == managed_hook_description
+
+
 def normalize_relpath(value: str | Path | None) -> str | None:
     if value is None:
         return None
@@ -273,19 +291,10 @@ def remove_vibeskills_node(
                 if not isinstance(entry, dict):
                     filtered_pre_tool_use.append(entry)
                     continue
-                description = str(entry.get("description") or "").strip()
-                entry_hooks = entry.get("hooks")
-                entry_command = ""
-                if isinstance(entry_hooks, list) and entry_hooks:
-                    first_hook = entry_hooks[0]
-                    if isinstance(first_hook, dict):
-                        entry_command = str(first_hook.get("command") or "").strip()
-                if (
-                    managed_hook_description
-                    and description == managed_hook_description
-                ) or (
-                    managed_hook_command
-                    and entry_command == managed_hook_command
+                if should_remove_claude_pretooluse_hook_entry(
+                    entry,
+                    managed_hook_command=managed_hook_command,
+                    managed_hook_description=managed_hook_description,
                 ):
                     continue
                 filtered_pre_tool_use.append(entry)
@@ -381,7 +390,7 @@ def plan_uninstall(repo_root: Path, target_root: Path, adapter: dict) -> dict[st
     if closure is not None:
         ownership_source.append("host-closure")
 
-    if (target_root / ".vibeskills").exists():
+    if ownership_source and (target_root / ".vibeskills").exists():
         deleted_dirs.add(".vibeskills")
 
     if not ownership_source:

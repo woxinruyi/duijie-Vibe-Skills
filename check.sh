@@ -859,8 +859,14 @@ if [[ "${HOST_ID}" == "claude-code" ]]; then
   fi
   hook_script_path="${TARGET_ROOT}/hooks/write-guard.js"
   check_path "managed Claude hook script" "${hook_script_path}"
-  hook_check_result="$(
-    python3 - "${TARGET_ROOT}/settings.json" "${hook_script_path}" <<'PY' 2>/dev/null || true
+  python_bin_for_hook_check="$(pick_python_for_adapter || true)"
+  if [[ -z "${python_bin_for_hook_check}" ]]; then
+    print_python_requirement_error "Claude hook verification"
+    echo "[FAIL] settings.json managed Claude hook command"
+    FAIL=$((FAIL+1))
+  else
+    hook_check_result="$(
+    "${python_bin_for_hook_check}" - "${TARGET_ROOT}/settings.json" "${hook_script_path}" <<'PY' 2>/dev/null || true
 import json, sys
 settings_path, hook_path = sys.argv[1], sys.argv[2]
 with open(settings_path, encoding='utf-8-sig') as fh:
@@ -885,13 +891,14 @@ for entry in entries:
 print("missing")
 raise SystemExit(1)
 PY
-  )"
-  if [[ "${hook_check_result}" == "ok" ]]; then
-    echo "[OK] settings.json managed Claude hook command"
-    PASS=$((PASS+1))
-  else
-    echo "[FAIL] settings.json managed Claude hook command"
-    FAIL=$((FAIL+1))
+    )"
+    if [[ "${hook_check_result}" == "ok" ]]; then
+      echo "[OK] settings.json managed Claude hook command"
+      PASS=$((PASS+1))
+    else
+      echo "[FAIL] settings.json managed Claude hook command"
+      FAIL=$((FAIL+1))
+    fi
   fi
 fi
 check_path "host closure manifest" "${TARGET_ROOT}/.vibeskills/host-closure.json"

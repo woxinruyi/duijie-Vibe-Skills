@@ -26,11 +26,11 @@ Official Microsoft sources tracked by this repo:
    - Microsoft noted that downloads were temporarily unavailable as of October 23, 2024
    - If Microsoft re-enables that lane, the repository can already boot a prepared disk image through --disk-image
 
-3. Windows 11 and Office 365 Deployment Lab Kit
-   https://www.microsoft.com/en-us/evalcenter/download-windows-11-enterprise
+3. Windows 11 and Microsoft 365 Deployment Lab Kit
+   https://www.microsoft.com/en-us/evalcenter/download-windows-11-office-365-lab-kit
 
    Truth snapshot:
-   - Microsoft publishes this as a separate official lab-kit download on the Windows 11 Enterprise evaluation page
+   - Microsoft publishes this as a separate official lab-kit download in Evaluation Center
    - This is a fallback research lead, not yet a repo-proven cold-start path
 
 Current recommendation on this host:

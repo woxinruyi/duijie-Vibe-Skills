@@ -100,7 +100,11 @@ echo "[INFO] Waiting for Windows ISO readiness at ${ISO_PATH}"
 echo "[INFO] Poll interval: ${INTERVAL_SECONDS}s"
 
 while true; do
-  STATUS_OUTPUT="$(bash "${READYNESS_SCRIPT}" --iso "${ISO_PATH}" || true)"
+  if ! STATUS_OUTPUT="$(bash "${READYNESS_SCRIPT}" --iso "${ISO_PATH}" 2>&1)"; then
+    echo "[ERROR] readiness probe failed for ${ISO_PATH}" >&2
+    printf '%s\n' "${STATUS_OUTPUT}" >&2
+    exit 1
+  fi
   STATUS="$(printf '%s\n' "${STATUS_OUTPUT}" | awk -F= '/^status=/{print $2}' | tail -n 1)"
   CURRENT_BYTES="$(printf '%s\n' "${STATUS_OUTPUT}" | awk -F= '/^current_bytes=/{print $2}' | tail -n 1)"
 

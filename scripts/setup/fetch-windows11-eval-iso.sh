@@ -18,6 +18,26 @@ Options:
 EOF
 }
 
+require_nonempty_path_arg() {
+  local label="$1"
+  local value="$2"
+  if [[ -z "${value}" ]]; then
+    echo "[ERROR] ${label} must not be empty." >&2
+    exit 1
+  fi
+}
+
+sanitize_filename() {
+  local raw="$1"
+  raw="$(printf '%s' "${raw}" | tr -d '\r\n')"
+  raw="${raw##*/}"
+  raw="${raw##*\\}"
+  if [[ -z "${raw}" || "${raw}" == "." || "${raw}" == ".." ]]; then
+    return 1
+  fi
+  printf '%s' "${raw}"
+}
+
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --output)
@@ -43,6 +63,20 @@ while [[ $# -gt 0 ]]; do
       ;;
   esac
 done
+
+if [[ -n "${OUTPUT_PATH}" ]]; then
+  require_nonempty_path_arg "--output" "${OUTPUT_PATH}"
+  if [[ -d "${OUTPUT_PATH}" || "${OUTPUT_PATH}" == */ ]]; then
+    echo "[ERROR] --output must be a file path, not a directory: ${OUTPUT_PATH}" >&2
+    exit 1
+  fi
+else
+  require_nonempty_path_arg "--download-dir" "${DOWNLOAD_DIR}"
+  if [[ -e "${DOWNLOAD_DIR}" && ! -d "${DOWNLOAD_DIR}" ]]; then
+    echo "[ERROR] --download-dir must point to a directory: ${DOWNLOAD_DIR}" >&2
+    exit 1
+  fi
+fi
 
 if ! command -v curl >/dev/null 2>&1; then
   echo "[ERROR] curl is required." >&2
@@ -89,7 +123,13 @@ fi
 
 if [[ -z "${OUTPUT_PATH}" ]]; then
   mkdir -p "${DOWNLOAD_DIR}"
-  OUTPUT_PATH="${DOWNLOAD_DIR}/${FILENAME}"
+  SAFE_FILENAME="$(sanitize_filename "${FILENAME}")" || {
+    echo "[ERROR] Resolved filename is unsafe: ${FILENAME}" >&2
+    exit 1
+  }
+  OUTPUT_PATH="${DOWNLOAD_DIR}/${SAFE_FILENAME}"
+else
+  mkdir -p "$(dirname "${OUTPUT_PATH}")"
 fi
 
 PARTIAL_PATH="${OUTPUT_PATH}.part"
@@ -119,6 +159,6 @@ PY
   mv "${OUTPUT_PATH}" "${PARTIAL_PATH}"
 fi
 
-curl -L --fail --progress-bar -C - -o "${PARTIAL_PATH}" "${SOURCE_URL}"
+curl -L --fail --progress-bar -C - -o "${PARTIAL_PATH}" "${FINAL_URL}"
 mv "${PARTIAL_PATH}" "${OUTPUT_PATH}"
 echo "[OK] Downloaded ISO to ${OUTPUT_PATH}"

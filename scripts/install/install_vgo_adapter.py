@@ -500,10 +500,28 @@ def load_json_object(path: Path) -> dict:
     try:
         payload = json.loads(path.read_text(encoding="utf-8"))
     except json.JSONDecodeError as exc:
-        raise SystemExit(f"Failed to parse JSON settings file: {path} ({exc})")
+        raise SystemExit(f"Failed to parse JSON settings file: {path} ({exc})") from exc
     if not isinstance(payload, dict):
         raise SystemExit(f"Expected JSON object in settings file: {path}")
     return payload
+
+
+def should_replace_claude_pretooluse_hook_entry(
+    entry: dict,
+    *,
+    managed_description: str,
+    hook_command: str,
+) -> bool:
+    existing_hooks = entry.get("hooks")
+    existing_command = ""
+    if isinstance(existing_hooks, list) and existing_hooks:
+        first_hook = existing_hooks[0]
+        if isinstance(first_hook, dict):
+            existing_command = str(first_hook.get("command") or "").strip()
+    if existing_command:
+        return existing_command == hook_command
+    description = str(entry.get("description") or "").strip()
+    return bool(description) and description == managed_description
 
 
 def upsert_claude_pretooluse_hook(settings: dict, hook_command: str) -> None:
@@ -532,14 +550,11 @@ def upsert_claude_pretooluse_hook(settings: dict, hook_command: str) -> None:
         if not isinstance(entry, dict):
             next_pre_tool_use.append(entry)
             continue
-        description = str(entry.get("description") or "").strip()
-        existing_command = ""
-        existing_hooks = entry.get("hooks")
-        if isinstance(existing_hooks, list) and existing_hooks:
-            first_hook = existing_hooks[0]
-            if isinstance(first_hook, dict):
-                existing_command = str(first_hook.get("command") or "").strip()
-        if description == managed_description or existing_command == hook_command:
+        if should_replace_claude_pretooluse_hook_entry(
+            entry,
+            managed_description=managed_description,
+            hook_command=hook_command,
+        ):
             if not replaced:
                 next_pre_tool_use.append(managed_entry)
                 replaced = True

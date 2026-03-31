@@ -1,11 +1,11 @@
 {
   "gate": "vibe-bootstrap-doctor-gate",
   "generated_at": "2026-03-31T07:32:32Z",
-  "repo_root": "/home/lqf/table/table5/workspace/vibe-skills-audit",
-  "target_root": "/tmp/claude-linux-proof-L350f0/target-root",
+  "repo_root": "<repo-root>",
+  "target_root": "<proof-target-root>",
   "gate_result": "PASS",
   "settings": {
-    "path": "/tmp/claude-linux-proof-L350f0/target-root/settings.json",
+    "path": "<proof-target-root>/settings.json",
     "exists": true,
     "intent_advice_api_key_state": "missing",
     "intent_advice_api_key_source": "missing",
@@ -21,31 +21,31 @@
   "plugins": [
     {
       "name": "serena",
-      "install_mode": "manual-codex",
+      "install_mode": "manual-host",
       "status": "platform_plugin_required",
       "required": false,
-      "next_step": "Provision via Codex-native MCP tooling if your Codex host exposes official MCP registration."
+      "next_step": "Provision via host-native MCP tooling if your Claude host exposes official MCP registration."
     },
     {
       "name": "context7",
-      "install_mode": "manual-codex",
+      "install_mode": "manual-host",
       "status": "platform_plugin_required",
       "required": false,
-      "next_step": "Provision via Codex-native MCP tooling if your Codex host exposes official MCP registration."
+      "next_step": "Provision via host-native MCP tooling if your Claude host exposes official MCP registration."
     },
     {
       "name": "github",
-      "install_mode": "manual-codex",
+      "install_mode": "manual-host",
       "status": "platform_plugin_required",
       "required": false,
-      "next_step": "Provision via Codex-native MCP tooling if your Codex host exposes official MCP registration."
+      "next_step": "Provision via host-native MCP tooling if your Claude host exposes official MCP registration."
     },
     {
       "name": "prompts-chat",
-      "install_mode": "manual-codex",
+      "install_mode": "manual-host",
       "status": "platform_plugin_required",
       "required": false,
-      "next_step": "Provision prompts.chat MCP/API integration in Codex runtime; optional, used by prompt-lookup/prompt-overlay."
+      "next_step": "Provision prompts.chat MCP/API integration in the Claude host runtime; optional, used by prompt-lookup/prompt-overlay."
     },
     {
       "name": "claude-flow",
@@ -56,28 +56,28 @@
     },
     {
       "name": "xan",
-      "install_mode": "manual-codex",
+      "install_mode": "manual-host",
       "status": "platform_plugin_required",
       "required": false,
       "next_step": "Install xan CLI manually (recommended on Windows: scoop install xan) for large CSV acceleration."
     },
     {
       "name": "fuck-u-code",
-      "install_mode": "manual-codex",
+      "install_mode": "manual-host",
       "status": "platform_plugin_required",
       "required": false,
       "next_step": "Optional quality-debt analyzer for quality-debt-overlay; install manually only if you want external analyzer hints beyond built-in risk scoring."
     },
     {
       "name": "ivy",
-      "install_mode": "manual-codex",
+      "install_mode": "manual-host",
       "status": "platform_plugin_required",
       "required": false,
       "next_step": "Optional framework-interop backend for framework-interop-overlay; install manually in Python environment (for example: pip install ivy)."
     },
     {
       "name": "leetcuda",
-      "install_mode": "manual-codex",
+      "install_mode": "manual-host",
       "status": "platform_plugin_required",
       "required": false,
       "next_step": "Optional methodology source for cuda-kernel-overlay; no runtime dependency required. Keep GPL-3.0 boundary: do not vendor upstream code."
@@ -141,26 +141,26 @@
   "mcp": {
     "profile": "full",
     "profile_path": "mcp/profiles/full.json",
-    "active_file_path": "/tmp/claude-linux-proof-L350f0/target-root/mcp/servers.active.json",
+    "active_file_path": "<proof-target-root>/mcp/servers.active.json",
     "active_file_exists": false,
     "servers": [
       {
         "name": "github",
         "mode": "plugin",
         "status": "platform_plugin_required",
-        "next_step": "Provision the corresponding Codex plugin in the host runtime."
+        "next_step": "Provision the corresponding host plugin in the Claude runtime."
       },
       {
         "name": "context7",
         "mode": "plugin",
         "status": "platform_plugin_required",
-        "next_step": "Provision the corresponding Codex plugin in the host runtime."
+        "next_step": "Provision the corresponding host plugin in the Claude runtime."
       },
       {
         "name": "serena",
         "mode": "plugin",
         "status": "platform_plugin_required",
-        "next_step": "Provision the corresponding Codex plugin in the host runtime."
+        "next_step": "Provision the corresponding host plugin in the Claude runtime."
       },
       {
         "name": "scrapling",

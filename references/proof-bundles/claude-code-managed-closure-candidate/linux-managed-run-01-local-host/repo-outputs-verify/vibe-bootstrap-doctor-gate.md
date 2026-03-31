@@ -5,7 +5,7 @@
 - Blocking Issues: `0`
 - Manual Actions Pending: `6`
 - Warnings: `1`
-- Target Root: `/tmp/claude-linux-proof-L350f0/target-root`
+- Target Root: `<proof-target-root>`
 - MCP Profile: `full`
 - MCP Active File Exists: `False`
 
@@ -18,15 +18,15 @@
 
 ## Plugin Readiness
 
-- `serena`: status=`platform_plugin_required` install_mode=`manual-codex` next_step=`Provision via Codex-native MCP tooling if your Codex host exposes official MCP registration.`
-- `context7`: status=`platform_plugin_required` install_mode=`manual-codex` next_step=`Provision via Codex-native MCP tooling if your Codex host exposes official MCP registration.`
-- `github`: status=`platform_plugin_required` install_mode=`manual-codex` next_step=`Provision via Codex-native MCP tooling if your Codex host exposes official MCP registration.`
-- `prompts-chat`: status=`platform_plugin_required` install_mode=`manual-codex` next_step=`Provision prompts.chat MCP/API integration in Codex runtime; optional, used by prompt-lookup/prompt-overlay.`
+- `serena`: status=`platform_plugin_required` install_mode=`manual-host` next_step=`Provision via host-native MCP tooling if your Claude host exposes official MCP registration.`
+- `context7`: status=`platform_plugin_required` install_mode=`manual-host` next_step=`Provision via host-native MCP tooling if your Claude host exposes official MCP registration.`
+- `github`: status=`platform_plugin_required` install_mode=`manual-host` next_step=`Provision via host-native MCP tooling if your Claude host exposes official MCP registration.`
+- `prompts-chat`: status=`platform_plugin_required` install_mode=`manual-host` next_step=`Provision prompts.chat MCP/API integration in the Claude host runtime; optional, used by prompt-lookup/prompt-overlay.`
 - `claude-flow`: status=`ready` install_mode=`scripted` next_step=`none`
-- `xan`: status=`platform_plugin_required` install_mode=`manual-codex` next_step=`Install xan CLI manually (recommended on Windows: scoop install xan) for large CSV acceleration.`
-- `fuck-u-code`: status=`platform_plugin_required` install_mode=`manual-codex` next_step=`Optional quality-debt analyzer for quality-debt-overlay; install manually only if you want external analyzer hints beyond built-in risk scoring.`
-- `ivy`: status=`platform_plugin_required` install_mode=`manual-codex` next_step=`Optional framework-interop backend for framework-interop-overlay; install manually in Python environment (for example: pip install ivy).`
-- `leetcuda`: status=`platform_plugin_required` install_mode=`manual-codex` next_step=`Optional methodology source for cuda-kernel-overlay; no runtime dependency required. Keep GPL-3.0 boundary: do not vendor upstream code.`
+- `xan`: status=`platform_plugin_required` install_mode=`manual-host` next_step=`Install xan CLI manually (recommended on Windows: scoop install xan) for large CSV acceleration.`
+- `fuck-u-code`: status=`platform_plugin_required` install_mode=`manual-host` next_step=`Optional quality-debt analyzer for quality-debt-overlay; install manually only if you want external analyzer hints beyond built-in risk scoring.`
+- `ivy`: status=`platform_plugin_required` install_mode=`manual-host` next_step=`Optional framework-interop backend for framework-interop-overlay; install manually in Python environment (for example: pip install ivy).`
+- `leetcuda`: status=`platform_plugin_required` install_mode=`manual-host` next_step=`Optional methodology source for cuda-kernel-overlay; no runtime dependency required. Keep GPL-3.0 boundary: do not vendor upstream code.`
 
 ## External Tools
 
@@ -43,9 +43,9 @@
 
 ## MCP Servers
 
-- `github`: mode=`plugin` status=`platform_plugin_required` next_step=`Provision the corresponding Codex plugin in the host runtime.`
-- `context7`: mode=`plugin` status=`platform_plugin_required` next_step=`Provision the corresponding Codex plugin in the host runtime.`
-- `serena`: mode=`plugin` status=`platform_plugin_required` next_step=`Provision the corresponding Codex plugin in the host runtime.`
+- `github`: mode=`plugin` status=`platform_plugin_required` next_step=`Provision the corresponding host plugin in the Claude runtime.`
+- `context7`: mode=`plugin` status=`platform_plugin_required` next_step=`Provision the corresponding host plugin in the Claude runtime.`
+- `serena`: mode=`plugin` status=`platform_plugin_required` next_step=`Provision the corresponding host plugin in the Claude runtime.`
 - `scrapling`: mode=`stdio` status=`ready` next_step=`none`
 - `claude-flow`: mode=`stdio` status=`ready` next_step=`none`
 

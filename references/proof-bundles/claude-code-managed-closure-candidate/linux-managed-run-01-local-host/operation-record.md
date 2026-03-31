@@ -4,16 +4,16 @@
 - Run ID: `linux-managed-run-01-local-host`
 - Timestamp: `2026-03-31T15:33:38+08:00`
 - Host type: real local Linux host
-- Repo source: `/home/lqf/table/table5/workspace/vibe-skills-audit`
-- Run root: `/tmp/claude-linux-proof-L350f0`
-- Target root: `/tmp/claude-linux-proof-L350f0/target-root`
+- Repo source: `<repo-root>`
+- Run root: `<proof-run-root>`
+- Target root: `<proof-target-root>`
 - Commands:
-  - `bash ./install.sh --host claude-code --profile full --target-root /tmp/claude-linux-proof-L350f0/target-root`
-  - `bash ./check.sh --host claude-code --profile full --target-root /tmp/claude-linux-proof-L350f0/target-root --deep`
-  - `pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/verify/vibe-bootstrap-doctor-gate.ps1 -TargetRoot /tmp/claude-linux-proof-L350f0/target-root -WriteArtifacts`
-  - `python3 ./scripts/verify/runtime_neutral/coherence_gate.py --target-root /tmp/claude-linux-proof-L350f0/target-root --write-artifacts`
+  - `bash ./install.sh --host claude-code --profile full --target-root <proof-target-root>`
+  - `bash ./check.sh --host claude-code --profile full --target-root <proof-target-root> --deep`
+  - `pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/verify/vibe-bootstrap-doctor-gate.ps1 -TargetRoot <proof-target-root> -WriteArtifacts`
+  - `python3 ./scripts/verify/runtime_neutral/coherence_gate.py --target-root <proof-target-root> --write-artifacts`
   - `claude --version`
-  - `CLAUDE_HOME=/tmp/claude-linux-proof-L350f0/target-root claude agents`
+  - `CLAUDE_HOME=<proof-target-root> claude agents`
 
 ## Outcome
 

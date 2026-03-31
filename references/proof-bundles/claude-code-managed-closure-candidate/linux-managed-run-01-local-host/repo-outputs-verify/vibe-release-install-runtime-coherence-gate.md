@@ -1,8 +1,8 @@
 # VCO Release / Install / Runtime Coherence Gate
 
 - Gate Result: **PASS**
-- Repo Root: `/home/lqf/table/table5/workspace/vibe-skills-audit`
-- Target Root: `/tmp/claude-linux-proof-L350f0/target-root`
+- Repo Root: `<repo-root>`
+- Target Root: `<proof-target-root>`
 - Assertion Failures: 0
 - Warnings: 0
 

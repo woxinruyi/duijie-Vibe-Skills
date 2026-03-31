@@ -1,7 +1,7 @@
 {
   "gate": "vibe-release-install-runtime-coherence-gate",
-  "repo_root": "/home/lqf/table/table5/workspace/vibe-skills-audit",
-  "target_root": "/tmp/claude-linux-proof-L350f0/target-root",
+  "repo_root": "<repo-root>",
+  "target_root": "<proof-target-root>",
   "generated_at": "2026-03-31T07:32:31Z",
   "gate_result": "PASS",
   "assertions": [

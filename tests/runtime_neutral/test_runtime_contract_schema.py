@@ -89,6 +89,23 @@ def load_json(path: str | Path) -> dict[str, object]:
 
 
 class RuntimeContractSchemaTests(unittest.TestCase):
+    def test_workspace_artifact_projection_defaults_to_repo_sidecar(self) -> None:
+        payload = run_ps_json(
+            "& { "
+            f". {_ps_single_quote(str(RUNTIME_COMMON))}; "
+            "$result = New-VibeWorkspaceArtifactProjection "
+            "-RepoRoot '/tmp/workspace' "
+            "-ArtifactRoot ''; "
+            "$result | ConvertTo-Json -Depth 10 }"
+        )
+
+        self.assertEqual("/tmp/workspace", payload["workspace_root"])
+        self.assertEqual("/tmp/workspace/.vibeskills", payload["workspace_sidecar_root"])
+        self.assertEqual("/tmp/workspace/.vibeskills", payload["artifact_root"])
+        self.assertEqual("workspace_sidecar_default", payload["artifact_root_source"])
+        self.assertTrue(payload["default_workspace_sidecar_artifact_root"])
+        self.assertEqual("/tmp/workspace/.vibeskills/project.json", payload["project_descriptor_path"])
+
     def test_identity_projection_preserves_requested_and_effective_ids(self) -> None:
         payload = run_ps_json(
             "& { "
@@ -281,6 +298,7 @@ class RuntimeContractSchemaTests(unittest.TestCase):
             "$hierarchyState = [pscustomobject]@{ governance_scope = 'child'; root_run_id = 'root-7'; parent_run_id = 'parent-7'; parent_unit_id = 'unit-7'; inherited_requirement_doc_path = '/tmp/req.md'; inherited_execution_plan_path = '/tmp/plan.md' }; "
             "$hierarchy = New-VibeHierarchyProjection -HierarchyState $hierarchyState -IncludeGovernanceScope; "
             "$authority = New-VibeRuntimePacketAuthorityFlagsProjection -HierarchyState $hierarchyState -RuntimeEntry 'vibe' -ExplicitRuntimeSkill 'vibe' -RouterTruthLevel 'shadow' -ShadowOnly $true -NonAuthoritative $false; "
+            "$storage = New-VibeWorkspaceArtifactProjection -RepoRoot '/tmp/workspace' -ArtifactRoot ''; "
             "$route = [pscustomobject]@{ "
             "selected = [pscustomobject]@{ pack_id = 'runtime-governor'; skill = 'systematic-debugging' }; "
             "route_mode = 'confirm_required'; "
@@ -305,6 +323,7 @@ class RuntimeContractSchemaTests(unittest.TestCase):
             "-HierarchyState $hierarchyState "
             "-HierarchyProjection $hierarchy "
             "-AuthorityFlagsProjection $authority "
+            "-StorageProjection $storage "
             "-RouteResult $route "
             "-Runtime $runtime "
             "-TaskType 'debug' "
@@ -335,6 +354,11 @@ class RuntimeContractSchemaTests(unittest.TestCase):
         self.assertTrue(payload["divergence_shadow"]["skill_mismatch"])
         self.assertEqual("openclaw", payload["host_adapter"]["requested_host_id"])
         self.assertEqual("openclaw", payload["host_adapter"]["effective_host_id"])
+        self.assertEqual("/tmp/workspace", payload["storage"]["workspace_root"])
+        self.assertEqual("/tmp/workspace/.vibeskills", payload["storage"]["workspace_sidecar_root"])
+        self.assertEqual("/tmp/workspace/.vibeskills", payload["storage"]["artifact_root"])
+        self.assertEqual("workspace_sidecar_default", payload["storage"]["artifact_root_source"])
+        self.assertEqual("/tmp/workspace/.vibeskills/project.json", payload["storage"]["project_descriptor_path"])
         self.assertTrue(payload["provenance"]["freeze_before_requirement_doc"])
 
     def test_runtime_summary_projection_preserves_public_contract_shape(self) -> None:
@@ -391,6 +415,15 @@ class RuntimeContractSchemaTests(unittest.TestCase):
             "$delivery = [pscustomobject]@{ "
             "summary = [pscustomobject]@{ gate_result = 'PASS'; completion_language_allowed = $true; readiness_state = 'passing'; manual_review_layer_count = 0; failing_layer_count = 0 } "
             "}; "
+            "$storage = [pscustomobject]@{ "
+            "workspace_root = '/tmp/workspace'; "
+            "workspace_sidecar_root = '/tmp/workspace/.vibeskills'; "
+            "project_descriptor_path = '/tmp/workspace/.vibeskills/project.json'; "
+            "artifact_root = '/tmp/workspace/.vibeskills'; "
+            "artifact_root_source = 'workspace_sidecar_default'; "
+            "default_workspace_sidecar_artifact_root = $true; "
+            "host_sidecar_root = '/tmp/openclaw/.vibeskills' "
+            "}; "
             "$result = New-VibeRuntimeSummaryProjection "
             "-RunId 'run-9' "
             "-Mode 'interactive_governed' "
@@ -400,6 +433,7 @@ class RuntimeContractSchemaTests(unittest.TestCase):
             "-HierarchyState $hierarchyState "
             "-Artifacts $artifacts "
             "-RelativeArtifacts $relative "
+            "-StorageProjection $storage "
             "-MemoryActivationReport $memory "
             "-DeliveryAcceptanceReport $delivery; "
             "$result | ConvertTo-Json -Depth 20 }"
@@ -431,6 +465,29 @@ class RuntimeContractSchemaTests(unittest.TestCase):
         self.assertTrue(payload["memory_activation"]["budget_guard_respected"])
         self.assertEqual("PASS", payload["delivery_acceptance"]["gate_result"])
         self.assertTrue(payload["delivery_acceptance"]["completion_language_allowed"])
+        self.assertEqual("/tmp/workspace", payload["storage"]["workspace_root"])
+        self.assertEqual("/tmp/workspace/.vibeskills", payload["storage"]["workspace_sidecar_root"])
+        self.assertEqual("workspace_sidecar_default", payload["storage"]["artifact_root_source"])
+        self.assertTrue(payload["storage"]["default_workspace_sidecar_artifact_root"])
+
+    def test_runtime_packet_storage_projection_tracks_workspace_sidecar_when_artifact_root_is_overridden(self) -> None:
+        with tempfile.TemporaryDirectory() as tempdir:
+            payload = run_runtime(
+                Path(tempdir),
+                extra_env={"VCO_HOST_ID": "openclaw"},
+            )
+            runtime_input = load_json(payload["summary"]["artifacts"]["runtime_input_packet"])
+            storage = runtime_input["storage"]
+
+            self.assertEqual(str(REPO_ROOT.resolve()), storage["workspace_root"])
+            self.assertEqual(str((REPO_ROOT / ".vibeskills").resolve()), storage["workspace_sidecar_root"])
+            self.assertEqual(str(Path(tempdir).resolve()), storage["artifact_root"])
+            self.assertEqual("explicit_override", storage["artifact_root_source"])
+            self.assertFalse(storage["default_workspace_sidecar_artifact_root"])
+            self.assertEqual(
+                str((REPO_ROOT / ".vibeskills" / "project.json").resolve()),
+                storage["project_descriptor_path"],
+            )
 
     def test_runtime_packet_execution_manifest_and_specialist_accounting_stay_aligned(self) -> None:
         with tempfile.TemporaryDirectory() as tempdir:

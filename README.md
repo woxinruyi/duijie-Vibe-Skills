@@ -508,6 +508,13 @@ _Skills keep growing — but you don't need to manage them individually._
 
 Running `uninstall.ps1` or `uninstall.sh --host <host>` is the partner surface to install. By default it performs a ledger-first, owned-only cleanup that only touches paths recorded in `.vibeskills/install-ledger.json`, `*.host-closure.json`, or the documented legacy surfaces. The full contract lives in [`docs/uninstall-governance.md`](./docs/uninstall-governance.md) so operators always know which host files Vibe actually owns.
 
+The `.vibeskills` brand is now split into two layers on purpose:
+
+- host-sidecar: `<target-root>/.vibeskills/host-settings.json`, `host-closure.json`, `install-ledger.json`, `bin/*`
+- workspace-sidecar: `<workspace-root>/.vibeskills/project.json`, `.vibeskills/docs/requirements/*`, `.vibeskills/docs/plans/*`, `.vibeskills/outputs/runtime/vibe-sessions/*`
+
+This keeps host install state separate from governed workspace/runtime artifacts while preserving the existing relative runtime contract. Explicit `ArtifactRoot` overrides still work when operators need a different artifact location.
+
 ### Install: One entry, two public versions
 
 <div align="center">

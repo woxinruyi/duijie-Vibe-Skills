@@ -247,6 +247,27 @@ class UnifiedUninstallTests(unittest.TestCase):
         self.assertTrue(foreign_command.exists())
         self.assertIn("legacy", payload["ownership_source"])
 
+    def test_workspace_project_sidecar_is_not_deleted_by_host_uninstall(self) -> None:
+        project_path = self.target_root / ".vibeskills" / "project.json"
+        requirement_path = self.target_root / ".vibeskills" / "docs" / "requirements" / "req.md"
+        project_path.parent.mkdir(parents=True, exist_ok=True)
+        write_json(
+            project_path,
+            {
+                "schema_version": 1,
+                "workspace_root": str(self.target_root.resolve()),
+                "workspace_sidecar_root": str((self.target_root / ".vibeskills").resolve()),
+            },
+        )
+        requirement_path.parent.mkdir(parents=True, exist_ok=True)
+        requirement_path.write_text("# runtime artifact\n", encoding="utf-8")
+
+        _, payload = self.run_python_uninstall(host="cursor")
+
+        self.assertTrue(project_path.exists())
+        self.assertTrue(requirement_path.exists())
+        self.assertNotIn(".vibeskills", payload["deleted_paths"])
+
     def test_shared_json_parse_failure_warns_without_deleting(self) -> None:
         settings_path = self.target_root / "settings.json"
         settings_path.write_text("{not-json}\n", encoding="utf-8")

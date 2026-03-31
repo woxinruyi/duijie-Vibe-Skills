@@ -53,6 +53,11 @@ if ([string]::IsNullOrWhiteSpace($RunId)) {
     $RunId = New-VibeRunId
 }
 $artifactBaseRoot = Get-VibeArtifactRoot -RepoRoot $runtime.repo_root -ArtifactRoot $ArtifactRoot
+$storageProjection = New-VibeWorkspaceArtifactProjection `
+    -RepoRoot $runtime.repo_root `
+    -Runtime $runtime `
+    -ArtifactRoot $ArtifactRoot `
+    -RouterTargetRoot (Resolve-VgoTargetRoot -HostId (Resolve-VgoHostId -HostId $env:VCO_HOST_ID))
 $hierarchyState = Get-VibeHierarchyState `
     -GovernanceScope $GovernanceScope `
     -RunId $RunId `
@@ -256,6 +261,7 @@ $summary = New-VibeRuntimeSummaryProjection `
     -HierarchyState $hierarchyState `
     -Artifacts $summaryArtifacts `
     -RelativeArtifacts $relativeArtifacts `
+    -StorageProjection $storageProjection `
     -MemoryActivationReport $memoryActivation.report `
     -DeliveryAcceptanceReport $deliveryAcceptanceReport
 

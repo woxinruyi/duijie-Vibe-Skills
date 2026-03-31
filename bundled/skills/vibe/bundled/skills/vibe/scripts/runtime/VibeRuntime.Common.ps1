@@ -328,6 +328,134 @@ function Get-VibeRuntimeContext {
     }
 }
 
+function Get-VibeWorkspaceRoot {
+    param(
+        [Parameter(Mandatory)] [string]$RepoRoot
+    )
+
+    return [System.IO.Path]::GetFullPath($RepoRoot)
+}
+
+function Get-VibeWorkspaceSidecarRoot {
+    param(
+        [Parameter(Mandatory)] [string]$RepoRoot
+    )
+
+    return [System.IO.Path]::GetFullPath((Join-Path (Get-VibeWorkspaceRoot -RepoRoot $RepoRoot) '.vibeskills'))
+}
+
+function Get-VibeWorkspaceProjectDescriptorPath {
+    param(
+        [Parameter(Mandatory)] [string]$RepoRoot
+    )
+
+    return [System.IO.Path]::GetFullPath((Join-Path (Get-VibeWorkspaceSidecarRoot -RepoRoot $RepoRoot) 'project.json'))
+}
+
+function Get-VibeHostSidecarRoot {
+    param(
+        [AllowNull()] [object]$Runtime,
+        [AllowEmptyString()] [string]$RouterTargetRoot = ''
+    )
+
+    $hostTargetRoot = if ([string]::IsNullOrWhiteSpace($RouterTargetRoot)) { $null } else { [System.IO.Path]::GetFullPath($RouterTargetRoot) }
+
+    if ([string]::IsNullOrWhiteSpace($hostTargetRoot) -and $null -ne $Runtime) {
+        if (
+            (Test-VibeObjectHasProperty -InputObject $Runtime -PropertyName 'host_settings') -and
+            $null -ne $Runtime.host_settings -and
+            (Test-VibeObjectHasProperty -InputObject $Runtime.host_settings -PropertyName 'target_root') -and
+            -not [string]::IsNullOrWhiteSpace([string]$Runtime.host_settings.target_root)
+        ) {
+            $hostTargetRoot = [System.IO.Path]::GetFullPath([string]$Runtime.host_settings.target_root)
+        } elseif (
+            (Test-VibeObjectHasProperty -InputObject $Runtime -PropertyName 'host_closure') -and
+            $null -ne $Runtime.host_closure -and
+            (Test-VibeObjectHasProperty -InputObject $Runtime.host_closure -PropertyName 'target_root') -and
+            -not [string]::IsNullOrWhiteSpace([string]$Runtime.host_closure.target_root)
+        ) {
+            $hostTargetRoot = [System.IO.Path]::GetFullPath([string]$Runtime.host_closure.target_root)
+        } elseif (
+            (Test-VibeObjectHasProperty -InputObject $Runtime -PropertyName 'host_adapter') -and
+            $null -ne $Runtime.host_adapter
+        ) {
+            $resolvedTargetRoot = Resolve-VibeHostTargetRoot -HostAdapter $Runtime.host_adapter
+            if (-not [string]::IsNullOrWhiteSpace($resolvedTargetRoot)) {
+                $hostTargetRoot = [System.IO.Path]::GetFullPath($resolvedTargetRoot)
+            }
+        }
+    }
+
+    if ([string]::IsNullOrWhiteSpace($hostTargetRoot)) {
+        return $null
+    }
+
+    return [System.IO.Path]::GetFullPath((Join-Path $hostTargetRoot '.vibeskills'))
+}
+
+function New-VibeWorkspaceArtifactProjection {
+    param(
+        [Parameter(Mandatory)] [string]$RepoRoot,
+        [AllowNull()] [object]$Runtime = $null,
+        [AllowEmptyString()] [string]$ArtifactRoot = '',
+        [AllowEmptyString()] [string]$RouterTargetRoot = ''
+    )
+
+    $workspaceRoot = Get-VibeWorkspaceRoot -RepoRoot $RepoRoot
+    $workspaceSidecarRoot = Get-VibeWorkspaceSidecarRoot -RepoRoot $RepoRoot
+    $projectDescriptorPath = Get-VibeWorkspaceProjectDescriptorPath -RepoRoot $RepoRoot
+    $useDefaultWorkspaceSidecar = [string]::IsNullOrWhiteSpace($ArtifactRoot)
+
+    if ($useDefaultWorkspaceSidecar) {
+        $resolvedArtifactRoot = $workspaceSidecarRoot
+        $artifactRootSource = 'workspace_sidecar_default'
+    } elseif ([System.IO.Path]::IsPathRooted($ArtifactRoot)) {
+        $resolvedArtifactRoot = [System.IO.Path]::GetFullPath($ArtifactRoot)
+        $artifactRootSource = 'explicit_override'
+    } else {
+        $resolvedArtifactRoot = [System.IO.Path]::GetFullPath((Join-Path $workspaceRoot $ArtifactRoot))
+        $artifactRootSource = 'explicit_override'
+    }
+
+    return [pscustomobject]@{
+        workspace_root = $workspaceRoot
+        workspace_sidecar_root = $workspaceSidecarRoot
+        project_descriptor_path = $projectDescriptorPath
+        artifact_root = $resolvedArtifactRoot
+        artifact_root_source = $artifactRootSource
+        default_workspace_sidecar_artifact_root = [bool]$useDefaultWorkspaceSidecar
+        host_sidecar_root = Get-VibeHostSidecarRoot -Runtime $Runtime -RouterTargetRoot $RouterTargetRoot
+    }
+}
+
+function Initialize-VibeWorkspaceProjectDescriptor {
+    param(
+        [Parameter(Mandatory)] [string]$RepoRoot,
+        [AllowNull()] [object]$Runtime = $null
+    )
+
+    $storage = New-VibeWorkspaceArtifactProjection -RepoRoot $RepoRoot -Runtime $Runtime
+    $descriptorPath = [string]$storage.project_descriptor_path
+    $descriptor = [pscustomobject]@{
+        schema_version = 1
+        brand = 'vibeskills'
+        generated_at = (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
+        workspace_root = [string]$storage.workspace_root
+        workspace_sidecar_root = [string]$storage.workspace_sidecar_root
+        project_descriptor_path = [string]$storage.project_descriptor_path
+        default_artifact_root = [string]$storage.workspace_sidecar_root
+        relative_runtime_contract = [pscustomobject]@{
+            requirement_root = 'docs/requirements'
+            execution_plan_root = 'docs/plans'
+            session_root = 'outputs/runtime/vibe-sessions'
+        }
+        host_sidecar_root = if ([string]::IsNullOrWhiteSpace([string]$storage.host_sidecar_root)) { $null } else { [string]$storage.host_sidecar_root }
+    }
+
+    Write-VibeJsonArtifact -Path $descriptorPath -Value $descriptor
+    return $descriptorPath
+}
+
 function New-VibeRunId {
     $timestamp = (Get-Date).ToUniversalTime().ToString('yyyyMMddTHHmmssZ')
     $suffix = [System.Guid]::NewGuid().ToString('N').Substring(0, 8)
@@ -484,6 +612,7 @@ function New-VibeRuntimeInputPacketProjection {
         [Parameter(Mandatory)] [object]$HierarchyState,
         [Parameter(Mandatory)] [object]$HierarchyProjection,
         [Parameter(Mandatory)] [object]$AuthorityFlagsProjection,
+        [AllowNull()] [object]$StorageProjection = $null,
         [Parameter(Mandatory)] [object]$RouteResult,
         [Parameter(Mandatory)] [object]$Runtime,
         [AllowEmptyString()] [string]$TaskType = '',
@@ -568,6 +697,7 @@ function New-VibeRuntimeInputPacketProjection {
         }
         overlay_decisions = @($OverlayDecisions)
         authority_flags = $AuthorityFlagsProjection
+        storage = $StorageProjection
         divergence_shadow = [pscustomobject]@{
             router_selected_skill = $routerSelectedSkill
             runtime_selected_skill = if ([string]::IsNullOrWhiteSpace($RuntimeSelectedSkill)) { $null } else { [string]$RuntimeSelectedSkill }
@@ -711,6 +841,7 @@ function New-VibeRuntimeSummaryProjection {
         [Parameter(Mandatory)] [object]$HierarchyState,
         [Parameter(Mandatory)] [object]$Artifacts,
         [Parameter(Mandatory)] [object]$RelativeArtifacts,
+        [AllowNull()] [object]$StorageProjection = $null,
         [AllowNull()] [object]$MemoryActivationReport,
         [AllowNull()] [object]$DeliveryAcceptanceReport
     )
@@ -727,6 +858,7 @@ function New-VibeRuntimeSummaryProjection {
         hierarchy = New-VibeHierarchyProjection -HierarchyState $HierarchyState
         stage_order = @(Get-VibeGovernedRuntimeStageOrder)
         artifacts = $Artifacts
+        storage = $StorageProjection
         memory_activation = New-VibeRuntimeSummaryMemoryActivationProjection -MemoryActivationReport $MemoryActivationReport
         delivery_acceptance = New-VibeRuntimeSummaryDeliveryAcceptanceProjection -DeliveryAcceptanceReport $DeliveryAcceptanceReport
         artifacts_relative = $RelativeArtifacts
@@ -775,15 +907,7 @@ function Get-VibeArtifactRoot {
         [AllowEmptyString()] [string]$ArtifactRoot = ''
     )
 
-    if ([string]::IsNullOrWhiteSpace($ArtifactRoot)) {
-        return [System.IO.Path]::GetFullPath($RepoRoot)
-    }
-
-    if ([System.IO.Path]::IsPathRooted($ArtifactRoot)) {
-        return [System.IO.Path]::GetFullPath($ArtifactRoot)
-    }
-
-    return [System.IO.Path]::GetFullPath((Join-Path $RepoRoot $ArtifactRoot))
+    return [string](New-VibeWorkspaceArtifactProjection -RepoRoot $RepoRoot -ArtifactRoot $ArtifactRoot).artifact_root
 }
 
 function Get-VibeSessionRoot {
@@ -806,6 +930,9 @@ function Ensure-VibeSessionRoot {
 
     $sessionRoot = Get-VibeSessionRoot -RepoRoot $RepoRoot -RunId $RunId -ArtifactRoot $ArtifactRoot
     New-Item -ItemType Directory -Path $sessionRoot -Force | Out-Null
+    if ([string]::IsNullOrWhiteSpace($ArtifactRoot)) {
+        Initialize-VibeWorkspaceProjectDescriptor -RepoRoot $RepoRoot | Out-Null
+    }
     return $sessionRoot
 }
 

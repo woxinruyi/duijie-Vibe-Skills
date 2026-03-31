@@ -9,7 +9,8 @@ This document defines the **owned-only uninstall** contract that balances defaul
 
 - **Ledger-first** – the installer writes `<target-root>/.vibeskills/install-ledger.json` (schema v1) enumerating created directories, files, JSON stanzas, runtime roots, and shared templates. The uninstaller consults this ledger before touching any path.
 - **Host closure fallback** – when a ledger is missing (legacy installs or preview lanes), `.vibeskills/host-closure.json` provides the secondary evidence of what Vibe wrote and what can be tidied safely.
-- **Legacy compatibility** – without ledger or closure proof, deletions are limited to clearly Vibe-owned surfaces such as `.vibeskills/**`, payload copies documented in `adapters/*/closure.json`, and the `vibeskills` stanzas inside shared JSON owned targets.
+- **Workspace sidecar boundary** – `<workspace-root>/.vibeskills/project.json` and the governed runtime artifact tree under `.vibeskills/docs/**` / `.vibeskills/outputs/**` are workspace-owned, not host-install-owned. Host uninstall must leave them intact.
+- **Legacy compatibility** – without ledger or closure proof, deletions are limited to clearly Vibe-owned host surfaces such as `.vibeskills/host-settings.json`, `.vibeskills/host-closure.json`, `.vibeskills/install-ledger.json`, payload copies documented in `adapters/*/closure.json`, and the `vibeskills` stanzas inside shared JSON owned targets.
 - **Shared JSON sanitization** – `settings.json` and `opencode.json` are never wiped entirely unless the ledger proves Vibe created them from canonical templates and the file collapses to `{}` once the `vibeskills` segment is removed.
 - **Owned-only receipts** – each uninstall run dumps `outputs/runtime/uninstall/<run-id>/uninstall-receipt.json` enumerating deleted, mutated, and skipped paths plus the ownership source that authorized each change (ledger, closure, legacy fallback).
 
@@ -19,6 +20,8 @@ This document defines the **owned-only uninstall** contract that balances defaul
 - `claude-code` / `cursor`: runtime core payload, specialist wrappers, host closure, and `commands/**`. The ledger drives safe removal of the `settings.json` `vibeskills` stanza while preserving unrelated host settings.
 - `windsurf` / `openclaw`: runtime core, workflow, and MCP payloads recorded in the ledger plus `.vibeskills/**`. `global_workflows/**` and `mcp_config.json` are deleted only when the ledger proves Vibe created them.
 - `opencode`: runtime core, command/agent wrappers, example config, and `.vibeskills/**`. `opencode.json` only loses Vibe-managed nodes (never entire file unless ledger proves `vibeskills` created it).
+
+When a target root contains both host-managed `.vibeskills/*` files and a workspace `project.json`, the uninstaller must degrade to targeted host-sidecar cleanup instead of removing the whole `.vibeskills/` directory.
 
 ## Verification & gate coverage
 

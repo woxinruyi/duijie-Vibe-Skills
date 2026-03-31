@@ -9,6 +9,7 @@ This SOP is the operator-facing playbook for the VCO install path after Wave33.
 - runtime freshness authoritatively validates the installed copy against canonical source
 - routine checks call the freshness and coherence gates only from the canonical repo root
 - repo-level `nested_bundled` is now treated as an optional compatibility mirror, not as a mandatory installed-runtime root
+- host install state lives under `<target-root>/.vibeskills/*`, while governed workspace runtime artifacts default to `<workspace-root>/.vibeskills/*`
 
 ## Canonical Operator Flow
 

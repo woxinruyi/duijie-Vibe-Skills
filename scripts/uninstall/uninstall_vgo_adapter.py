@@ -236,6 +236,49 @@ def parse_merged_files(values: object, target_root: Path) -> dict[str, dict[str,
     return merged
 
 
+def collect_host_sidecar_paths(
+    target_root: Path,
+    ledger: dict | None,
+    closure: dict | None,
+) -> set[str]:
+    sidecar_root = target_root / ".vibeskills"
+    managed: set[str] = set()
+    if not sidecar_root.exists():
+        return managed
+
+    for marker in ("host-settings.json", "host-closure.json", "install-ledger.json"):
+        marker_path = sidecar_root / marker
+        if marker_path.exists():
+            managed.add(f".vibeskills/{marker}")
+
+    if isinstance(ledger, dict):
+        managed.update(parse_path_list(ledger.get("specialist_wrapper_paths"), target_root))
+
+    if isinstance(closure, dict):
+        wrapper = closure.get("specialist_wrapper")
+        if isinstance(wrapper, dict):
+            for field in ("launcher_path", "script_path"):
+                rel = relativize_to_target(wrapper.get(field), target_root)
+                if rel:
+                    managed.add(rel)
+
+    return {entry for entry in managed if entry}
+
+
+def sidecar_has_workspace_project(target_root: Path) -> bool:
+    return (target_root / ".vibeskills" / "project.json").exists()
+
+
+def sidecar_has_host_markers(target_root: Path) -> bool:
+    sidecar_root = target_root / ".vibeskills"
+    if not sidecar_root.exists():
+        return False
+    for marker in ("host-settings.json", "host-closure.json", "install-ledger.json"):
+        if (sidecar_root / marker).exists():
+            return True
+    return (sidecar_root / "bin").exists()
+
+
 def remove_vibeskills_node(
     path: Path,
     *,
@@ -323,7 +366,6 @@ def plan_uninstall(repo_root: Path, target_root: Path, adapter: dict) -> dict[st
         for rel in sorted(parse_path_list(ledger.get("created_paths"), target_root)):
             candidate = target_root / rel
             if rel == ".vibeskills" and candidate.exists():
-                deleted_dirs.add(rel)
                 continue
             if candidate.exists() and candidate.is_dir() and not candidate.is_symlink():
                 continue
@@ -340,7 +382,9 @@ def plan_uninstall(repo_root: Path, target_root: Path, adapter: dict) -> dict[st
     if closure is not None:
         ownership_source.append("host-closure")
 
-    if (target_root / ".vibeskills").exists():
+    managed_files.update(collect_host_sidecar_paths(target_root, ledger, closure))
+
+    if sidecar_has_host_markers(target_root) and not sidecar_has_workspace_project(target_root):
         deleted_dirs.add(".vibeskills")
 
     if not ownership_source:

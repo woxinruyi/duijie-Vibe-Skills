@@ -462,6 +462,11 @@ $taskType = Get-VibeRouterTaskType -Task $Task
 $routerScriptPath = Join-Path $runtime.repo_root ([string]$policy.router_script_path)
 $routerHostId = Resolve-VgoHostId -HostId $env:VCO_HOST_ID
 $routerTargetRoot = Resolve-VgoTargetRoot -HostId $routerHostId
+$storageProjection = New-VibeWorkspaceArtifactProjection `
+    -RepoRoot $runtime.repo_root `
+    -Runtime $runtime `
+    -ArtifactRoot $ArtifactRoot `
+    -RouterTargetRoot $routerTargetRoot
 $requestedSkill = if ($policy.default_requested_skill) { [string]$policy.default_requested_skill } else { 'vibe' }
 $unattended = $false
 $hierarchyState = Get-VibeHierarchyState `
@@ -538,6 +543,7 @@ $packet = New-VibeRuntimeInputPacketProjection `
     -HierarchyState $hierarchyState `
     -HierarchyProjection $hierarchyProjection `
     -AuthorityFlagsProjection $authorityFlagsProjection `
+    -StorageProjection $storageProjection `
     -RouteResult $routeResult `
     -Runtime $runtime `
     -TaskType $taskType `

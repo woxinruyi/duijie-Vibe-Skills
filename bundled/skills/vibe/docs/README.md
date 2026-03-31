@@ -35,8 +35,8 @@
 这些是**运行时相关**的文档——安装方式、运行机制、层级治理说明：
 
 **安装**
-- [`install/one-click-install-release-copy.md`](./install/one-click-install-release-copy.md)：面向普通用户的一键安装提示词（中文）
-- [`install/one-click-install-release-copy.en.md`](./install/one-click-install-release-copy.en.md)：one-click onboarding prompt for ordinary users (English)
+- [`install/one-click-install-release-copy.md`](./install/one-click-install-release-copy.md)：面向普通用户的一键安装发布文案与 AI 助手复制提示词
+- [`install/one-click-install-release-copy.en.md`](./install/one-click-install-release-copy.en.md)：ordinary-user public release copy and copy-paste onboarding prompt
 
 **运行机制规范**（这些文件定义了 `/vibe` 调用后的行为规则，不需要改动）
 - [`../SKILL.md`](../SKILL.md)：vibe 技能的主合约定义（机器读取 + 人类参考）

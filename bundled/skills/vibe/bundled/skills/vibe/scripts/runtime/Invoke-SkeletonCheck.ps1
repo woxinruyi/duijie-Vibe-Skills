@@ -16,6 +16,7 @@ if ([string]::IsNullOrWhiteSpace($RunId)) {
 }
 
 $sessionRoot = Ensure-VibeSessionRoot -RepoRoot $runtime.repo_root -RunId $RunId -ArtifactRoot $ArtifactRoot
+$artifactBaseRoot = Get-VibeArtifactRoot -RepoRoot $runtime.repo_root -ArtifactRoot $ArtifactRoot
 $requiredPaths = @(
     'SKILL.md',
     'protocols/runtime.md',
@@ -61,13 +62,13 @@ $receipt = [pscustomobject]@{
     git_status = @($gitStatus)
     required_paths = @($pathChecks)
     existing_requirement_docs = @(
-        if (Test-Path -LiteralPath (Join-Path $runtime.repo_root 'docs\requirements')) {
-            Get-ChildItem -LiteralPath (Join-Path $runtime.repo_root 'docs\requirements') -Filter *.md -File | Select-Object -ExpandProperty Name
+        if (Test-Path -LiteralPath (Join-Path $artifactBaseRoot 'docs\requirements')) {
+            Get-ChildItem -LiteralPath (Join-Path $artifactBaseRoot 'docs\requirements') -Filter *.md -File | Select-Object -ExpandProperty Name
         }
     )
     existing_plan_docs = @(
-        if (Test-Path -LiteralPath (Join-Path $runtime.repo_root 'docs\plans')) {
-            Get-ChildItem -LiteralPath (Join-Path $runtime.repo_root 'docs\plans') -Filter *.md -File | Select-Object -ExpandProperty Name
+        if (Test-Path -LiteralPath (Join-Path $artifactBaseRoot 'docs\plans')) {
+            Get-ChildItem -LiteralPath (Join-Path $artifactBaseRoot 'docs\plans') -Filter *.md -File | Select-Object -ExpandProperty Name
         }
     )
 }

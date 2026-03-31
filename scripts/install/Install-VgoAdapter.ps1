@@ -145,15 +145,29 @@ $script:VgoSpecialistWrapperPaths = [System.Collections.Generic.List[string]]::n
 function Add-VgoTrackedPath {
     param(
         [Parameter(Mandatory)] [string]$Path,
-        [Parameter(Mandatory)] [System.Collections.Generic.HashSet[string]]$Set
+        [Parameter(Mandatory)] [object]$Set
     )
 
     if ([string]::IsNullOrWhiteSpace($Path)) {
         return
     }
 
+    if ($null -eq $Set) {
+        return
+    }
+
     $resolved = [System.IO.Path]::GetFullPath($Path)
-    [void]$Set.Add($resolved)
+    if ($Set -is [System.Collections.Generic.HashSet[string]]) {
+        [void]$Set.Add($resolved)
+        return
+    }
+
+    if ($Set.PSObject.Methods.Name -contains 'Add') {
+        [void]$Set.Add($resolved)
+        return
+    }
+
+    throw 'Tracked path set does not support Add().'
 }
 
 function Add-VgoCreatedPath {

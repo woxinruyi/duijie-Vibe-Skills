@@ -106,7 +106,7 @@ interactive_governed
 
 - `rules/common/*.md`
 - `rules/typescript/*.md`
-- `scripts/release/__pycache__/build_release_bundle.cpython-310.pyc`
+- `scripts/release/build_release_bundle.py`
 - `check.sh`
 - `check.ps1`
 - `scripts.check.upstream.sh`

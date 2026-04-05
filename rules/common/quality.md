@@ -57,6 +57,8 @@
 
 ## Completion Checklist
 
+This checklist is binary: all items should be satisfied before completion, or any exception must be called out explicitly in the delivery note with rationale.
+
 - code is readable and well named
 - functions stay small and focused
 - files stay focused and bounded

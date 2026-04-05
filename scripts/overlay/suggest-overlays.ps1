@@ -48,9 +48,32 @@ function Read-JsonFile([string]$Path) {
   return (Get-Content -LiteralPath $Path -Raw -Encoding UTF8 | ConvertFrom-Json)
 }
 
+function Resolve-RepoChildPath([string]$VcoRoot, [string]$RelativePath, [string]$AllowedSubtree) {
+  if ([string]::IsNullOrWhiteSpace($RelativePath)) {
+    throw "Path is required."
+  }
+
+  $repoRoot = [System.IO.Path]::GetFullPath($VcoRoot)
+  $allowedRoot = [System.IO.Path]::GetFullPath((Join-Path $repoRoot $AllowedSubtree))
+  $resolvedPath = [System.IO.Path]::GetFullPath((Join-Path $repoRoot $RelativePath))
+  $allowedPrefix = $allowedRoot.TrimEnd('\', '/') + [System.IO.Path]::DirectorySeparatorChar
+
+  $isAllowed = $resolvedPath.Equals($allowedRoot, [System.StringComparison]::OrdinalIgnoreCase) -or
+    $resolvedPath.StartsWith($allowedPrefix, [System.StringComparison]::OrdinalIgnoreCase)
+
+  if (-not $isAllowed) {
+    throw "Path escapes allowed subtree '$AllowedSubtree': $RelativePath"
+  }
+
+  if (-not (Test-Path -LiteralPath $resolvedPath)) {
+    throw "Path not found: $RelativePath"
+  }
+
+  return (Resolve-Path -LiteralPath $resolvedPath | Select-Object -ExpandProperty Path)
+}
+
 function Resolve-OverlayPath([string]$VcoRoot, [string]$OverlayPath) {
-  if ([string]::IsNullOrWhiteSpace($OverlayPath)) { return '' }
-  return (Resolve-Path -LiteralPath (Join-Path $VcoRoot $OverlayPath) | Select-Object -ExpandProperty Path)
+  return (Resolve-RepoChildPath -VcoRoot $VcoRoot -RelativePath $OverlayPath -AllowedSubtree 'references/overlays')
 }
 
 function Format-MatchSummary([string[]]$Hits) {
@@ -145,7 +168,7 @@ function Build-FamilyCatalogResult {
     }
   }
 
-  $hasSignal = ($overlayRows | Measure-Object -Property Score -Maximum).Maximum -gt 0
+  $hasSignal = ($overlayRows | Where-Object { @($_.Hits).Count -gt 0 } | Measure-Object).Count -gt 0
   if (-not $hasSignal) {
     $fallbackIds = @()
     if ($null -ne $Config.stage_fallbacks) {
@@ -279,7 +302,7 @@ function Build-VcoCatalogResult {
 
   $providers = @()
   foreach ($p in $CatalogConfig.providers) {
-    $providerConfig = Read-JsonFile (Join-Path $VcoRoot ([string]$p.config_path))
+    $providerConfig = Read-JsonFile (Resolve-RepoChildPath -VcoRoot $VcoRoot -RelativePath ([string]$p.config_path) -AllowedSubtree 'config')
     $priorityBoost = 0.0
     if ($null -ne $p.priority_boost) { $priorityBoost = [double]$p.priority_boost }
     $providers += [pscustomobject]@{
@@ -460,7 +483,7 @@ $catalogSpecs = @{
   'vco' = 'config\vco-overlays.json'
 }
 
-$config = Read-JsonFile (Join-Path $vcoRoot $catalogSpecs[$Catalog])
+$config = Read-JsonFile (Resolve-RepoChildPath -VcoRoot $vcoRoot -RelativePath $catalogSpecs[$Catalog] -AllowedSubtree 'config')
 $result = if ($Catalog -eq 'vco') {
   Build-VcoCatalogResult -VcoRoot $vcoRoot -CatalogConfig $config -TaskText $Task -StageName $Stage -RequestedTopK $TopK -SelectText $Select
 } else {

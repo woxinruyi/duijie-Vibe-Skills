@@ -81,7 +81,7 @@ L
 ```bash
 git diff --check
 pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/overlay/suggest-overlays.ps1 -Catalog agency -Task "test api bug" -Stage do -AsJson
-rg -n "suggest-agency-overlays.ps1|suggest-gitnexus-overlays.ps1|suggest-turix-cua-overlays.ps1|suggest-vco-overlays.ps1|scripts/learn/vibe-adaptive-train.ps1" docs scripts config tests references . -g '!outputs/**' -g '!node_modules/**'
+rg -n "suggest-agency-overlays.ps1|suggest-gitnexus-overlays.ps1|suggest-turix-cua-overlays.ps1|suggest-vco-overlays.ps1|scripts/learn/vibe-adaptive-train.ps1" scripts config tests references -g '!outputs/**' -g '!node_modules/**'
 ```
 
 ## Rollback Plan

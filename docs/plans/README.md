@@ -13,8 +13,8 @@
 
 ## Start Here
 
-- 当前 `scripts/` 次级表面收口计划：[`2026-04-05-scripts-secondary-surfaces-slimming-execution-plan.md`](./2026-04-05-scripts-secondary-surfaces-slimming-execution-plan.md)
-- 配套冻结需求：[`../requirements/2026-04-05-scripts-secondary-surfaces-slimming.md`](../requirements/2026-04-05-scripts-secondary-surfaces-slimming.md)
+- 当前 PR `#117` review-fix 计划：[`2026-04-05-pr117-review-fixes-execution-plan.md`](./2026-04-05-pr117-review-fixes-execution-plan.md)
+- 配套冻结需求：[`../requirements/2026-04-05-pr117-review-fixes.md`](../requirements/2026-04-05-pr117-review-fixes.md)
 
 ## Contract-Retained Plans
 

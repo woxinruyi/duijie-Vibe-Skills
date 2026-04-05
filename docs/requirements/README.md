@@ -21,7 +21,7 @@ Primary policy:
 
 ## Current Entry
 
-- [`2026-04-05-scripts-secondary-surfaces-slimming.md`](./2026-04-05-scripts-secondary-surfaces-slimming.md): 冻结本轮 `scripts/overlay + scripts/research/learn` 次级脚本面收口的治理范围、保留边界和验收标准。
+- [`2026-04-05-pr117-review-fixes.md`](./2026-04-05-pr117-review-fixes.md): 冻结 PR `#117` review-fix 波次的修复范围、运行时约束和验收标准。
 
 ## Contract-Retained Baselines
 

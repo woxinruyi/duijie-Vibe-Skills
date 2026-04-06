@@ -59,7 +59,7 @@ function New-VibeDelegatedLaneSpec {
         lane_id = $laneId
         lane_kind = [string]($LaneEntry.lane_kind)
         lane_root = $laneRoot
-        run_id = $RunId
+        run_id = $laneId
         mode = $Mode
         governance_scope = 'child'
         root_run_id = [string]($HierarchyState.root_run_id)

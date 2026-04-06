@@ -897,6 +897,9 @@ function Assert-VibeDelegationEnvelope {
         [AllowNull()] [object]$HierarchyState = $null,
         [AllowNull()] [object]$LaneSpec = $null,
         [AllowEmptyString()] [string]$ExpectedWriteScope = '',
+        [AllowEmptyString()] [string]$ExpectedChildRunId = '',
+        [AllowEmptyString()] [string]$ExpectedParentRunId = '',
+        [AllowEmptyString()] [string]$ExpectedParentUnitId = '',
         [AllowEmptyString()] [string]$ExpectedSkillId = '',
         [AllowNull()] [object]$HierarchyContract = $null
     )
@@ -932,6 +935,44 @@ function Assert-VibeDelegationEnvelope {
         $writeScopeValid = $writeScopeValid -and ([string]$envelope.write_scope -eq $writeScopeValue)
     }
 
+    $childRunValue = if (-not [string]::IsNullOrWhiteSpace($ExpectedChildRunId)) {
+        $ExpectedChildRunId
+    } elseif ($null -ne $LaneSpec -and $LaneSpec.PSObject.Properties.Name -contains 'run_id' -and -not [string]::IsNullOrWhiteSpace([string]$LaneSpec.run_id)) {
+        [string]$LaneSpec.run_id
+    } else {
+        ''
+    }
+    $parentRunValue = if (-not [string]::IsNullOrWhiteSpace($ExpectedParentRunId)) {
+        $ExpectedParentRunId
+    } elseif ($null -ne $LaneSpec -and $LaneSpec.PSObject.Properties.Name -contains 'parent_run_id' -and -not [string]::IsNullOrWhiteSpace([string]$LaneSpec.parent_run_id)) {
+        [string]$LaneSpec.parent_run_id
+    } elseif ($null -ne $HierarchyState -and -not [string]::IsNullOrWhiteSpace([string]$HierarchyState.parent_run_id)) {
+        [string]$HierarchyState.parent_run_id
+    } else {
+        ''
+    }
+    $parentUnitValue = if (-not [string]::IsNullOrWhiteSpace($ExpectedParentUnitId)) {
+        $ExpectedParentUnitId
+    } elseif ($null -ne $LaneSpec -and $LaneSpec.PSObject.Properties.Name -contains 'parent_unit_id' -and -not [string]::IsNullOrWhiteSpace([string]$LaneSpec.parent_unit_id)) {
+        [string]$LaneSpec.parent_unit_id
+    } elseif ($null -ne $HierarchyState -and -not [string]::IsNullOrWhiteSpace([string]$HierarchyState.parent_unit_id)) {
+        [string]$HierarchyState.parent_unit_id
+    } else {
+        ''
+    }
+    $childRunValid = $true
+    if (-not [string]::IsNullOrWhiteSpace($childRunValue)) {
+        $childRunValid = ([string]$envelope.child_run_id -eq $childRunValue)
+    }
+    $parentRunValid = $true
+    if (-not [string]::IsNullOrWhiteSpace($parentRunValue)) {
+        $parentRunValid = ([string]$envelope.parent_run_id -eq $parentRunValue)
+    }
+    $parentUnitValid = $true
+    if (-not [string]::IsNullOrWhiteSpace($parentUnitValue)) {
+        $parentUnitValid = ([string]$envelope.parent_unit_id -eq $parentUnitValue)
+    }
+
     $specialistApprovalValid = $true
     if (-not [string]::IsNullOrWhiteSpace($ExpectedSkillId)) {
         $specialistApprovalValid = ($approvedSpecialists -contains $ExpectedSkillId)
@@ -960,19 +1001,31 @@ function Assert-VibeDelegationEnvelope {
     if (-not $rootRunValid) {
         throw 'Delegation envelope root run id does not match the governed child context.'
     }
+    if (-not $childRunValid) {
+        throw 'Delegation envelope child run id does not match the governed child context.'
+    }
+    if (-not $parentRunValid) {
+        throw 'Delegation envelope parent run id does not match the governed child context.'
+    }
+    if (-not $parentUnitValid) {
+        throw 'Delegation envelope parent unit id does not match the governed child context.'
+    }
     if (-not $specialistApprovalValid) {
         throw ("Delegation envelope does not approve specialist dispatch: {0}" -f $ExpectedSkillId)
     }
 
     $receiptPath = Get-VibeGovernanceArtifactPath -SessionRoot $SessionRoot -ArtifactName 'delegation_validation' -HierarchyContract $HierarchyContract
     $receipt = [pscustomobject]@{
-        child_run_id = if ($null -ne $LaneSpec -and $LaneSpec.PSObject.Properties.Name -contains 'run_id') { [string]$LaneSpec.run_id } elseif ($envelope.PSObject.Properties.Name -contains 'child_run_id') { [string]$envelope.child_run_id } else { $null }
+        child_run_id = if (-not [string]::IsNullOrWhiteSpace($childRunValue)) { $childRunValue } elseif ($envelope.PSObject.Properties.Name -contains 'child_run_id') { [string]$envelope.child_run_id } else { $null }
         root_run_id = [string]$envelope.root_run_id
         envelope_path = [System.IO.Path]::GetFullPath($EnvelopePath)
         requirement_doc_path = [System.IO.Path]::GetFullPath([string]$envelope.requirement_doc_path)
         execution_plan_path = [System.IO.Path]::GetFullPath([string]$envelope.execution_plan_path)
         write_scope_valid = [bool]$writeScopeValid
         prompt_tail_valid = [bool]$promptTailValid
+        child_run_valid = [bool]$childRunValid
+        parent_run_valid = [bool]$parentRunValid
+        parent_unit_valid = [bool]$parentUnitValid
         specialist_approval_valid = [bool]$specialistApprovalValid
         validated_at = (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
     }

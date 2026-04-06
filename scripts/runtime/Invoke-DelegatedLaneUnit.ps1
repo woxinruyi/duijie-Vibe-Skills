@@ -34,6 +34,9 @@ $delegationValidation = Assert-VibeDelegationEnvelope `
     -EnvelopePath ([string]$laneSpec.delegation_envelope_path) `
     -LaneSpec $laneSpec `
     -ExpectedWriteScope ([string]$laneSpec.write_scope) `
+    -ExpectedChildRunId ([string]$laneSpec.run_id) `
+    -ExpectedParentRunId ([string]$laneSpec.parent_run_id) `
+    -ExpectedParentUnitId ([string]$laneSpec.parent_unit_id) `
     -ExpectedSkillId $expectedSkillId
 
 switch ($laneKind) {

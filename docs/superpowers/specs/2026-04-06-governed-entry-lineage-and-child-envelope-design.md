@@ -346,10 +346,13 @@ The governed path should fail fast for these conditions:
 These failures are runtime-authoritative only for the official governed path. They do not claim system-wide sandbox authority beyond that boundary.
 
 ## Data And Artifact Model
-New artifacts proposed under `outputs/runtime/vibe-sessions/<run-id>/`:
+Root-run artifacts under `outputs/runtime/vibe-sessions/<run-id>/`:
 
 - `governance-capsule.json`
 - `stage-lineage.json`
+
+Child-lane/session artifacts under the delegated child root:
+
 - `delegation-envelope.json`
 - `delegation-validation-receipt.json`
 

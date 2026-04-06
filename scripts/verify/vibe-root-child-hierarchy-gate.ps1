@@ -91,12 +91,15 @@ if ($hasSummary) {
     $executionManifest = Get-Content -LiteralPath $summary.summary.artifacts.execution_manifest -Raw -Encoding UTF8 | ConvertFrom-Json
     $governanceCapsule = Get-Content -LiteralPath $summary.summary.artifacts.governance_capsule -Raw -Encoding UTF8 | ConvertFrom-Json
     $stageLineage = Get-Content -LiteralPath $summary.summary.artifacts.stage_lineage -Raw -Encoding UTF8 | ConvertFrom-Json
+    $expectedStageIds = @($runtimeContract.stages | ForEach-Object { [string]$_.id })
 
     Add-Assertion -Results ([ref]$results) -Condition ($summary.mode -eq 'interactive_governed') -Message 'hierarchy smoke runs interactive_governed mode'
     Add-Assertion -Results ([ref]$results) -Condition ($runtimeInputPacket.route_snapshot.selected_skill -eq 'vibe') -Message 'root hierarchy smoke keeps vibe as frozen route skill'
     Add-Assertion -Results ([ref]$results) -Condition ($runtimeInputPacket.authority_flags.explicit_runtime_skill -eq 'vibe') -Message 'root hierarchy smoke keeps vibe as runtime authority'
     Add-Assertion -Results ([ref]$results) -Condition ($governanceCapsule.runtime_selected_skill -eq 'vibe') -Message 'root hierarchy smoke governance capsule keeps vibe authority'
-    Add-Assertion -Results ([ref]$results) -Condition (@($stageLineage.stages).Count -eq 6) -Message 'root hierarchy smoke stage-lineage records six governed stages'
+    Add-Assertion -Results ([ref]$results) -Condition ((
+        @($stageLineage.stages | ForEach-Object { [string]$_.stage_name }) -join '|'
+    ) -eq ($expectedStageIds -join '|')) -Message 'root hierarchy smoke stage-lineage preserves the fixed governed stage order'
     Add-Assertion -Results ([ref]$results) -Condition ($runtimeInputPacket.governance_scope -eq 'root') -Message 'runtime packet marks root governance scope'
     Add-Assertion -Results ([ref]$results) -Condition ([bool]$runtimeInputPacket.authority_flags.allow_requirement_freeze) -Message 'root packet allows requirement freeze'
     Add-Assertion -Results ([ref]$results) -Condition ([bool]$runtimeInputPacket.authority_flags.allow_plan_freeze) -Message 'root packet allows plan freeze'

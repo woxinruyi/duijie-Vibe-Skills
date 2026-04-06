@@ -134,9 +134,12 @@ $governanceCapsule = Get-Content -LiteralPath $summary.summary.artifacts.governa
 $stageLineage = Get-Content -LiteralPath $summary.summary.artifacts.stage_lineage -Raw -Encoding UTF8 | ConvertFrom-Json
 $generatedRequirement = Get-Content -LiteralPath $summary.summary.artifacts.requirement_doc -Raw -Encoding UTF8
 $generatedPlan = Get-Content -LiteralPath $summary.summary.artifacts.execution_plan -Raw -Encoding UTF8
+$expectedStageIds = @($runtimeContract.stages | ForEach-Object { [string]$_.id })
 
 Add-Assertion -Results ([ref]$results) -Condition ($governanceCapsule.runtime_selected_skill -eq 'vibe') -Message 'runtime smoke governance capsule keeps vibe authority'
-Add-Assertion -Results ([ref]$results) -Condition (@($stageLineage.stages).Count -eq 6) -Message 'runtime smoke stage-lineage records six governed stages'
+Add-Assertion -Results ([ref]$results) -Condition ((
+    @($stageLineage.stages | ForEach-Object { [string]$_.stage_name }) -join '|'
+) -eq ($expectedStageIds -join '|')) -Message 'runtime smoke stage-lineage preserves the fixed governed stage order'
 Add-Assertion -Results ([ref]$results) -Condition ($executeReceipt.status -ne 'execution-contract-prepared') -Message 'runtime smoke execute receipt is not receipt-only'
 Add-Assertion -Results ([ref]$results) -Condition ($executionManifest.status -eq 'completed') -Message 'runtime smoke execution manifest completed' -Details $executionManifest.status
 Add-Assertion -Results ([ref]$results) -Condition ([int]$executionManifest.executed_unit_count -ge 2) -Message 'runtime smoke executes at least two governed execution units' -Details $executionManifest.executed_unit_count

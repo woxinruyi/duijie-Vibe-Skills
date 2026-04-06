@@ -112,6 +112,9 @@ if ([string]$hierarchyState.governance_scope -eq 'child') {
         -SessionRoot ([string]$skeleton.session_root) `
         -EnvelopePath ([string]$hierarchyState.delegation_envelope_path) `
         -HierarchyState $hierarchyState `
+        -ExpectedChildRunId $RunId `
+        -ExpectedParentRunId ([string]$hierarchyState.parent_run_id) `
+        -ExpectedParentUnitId ([string]$hierarchyState.parent_unit_id) `
         -HierarchyContract $runtime.runtime_input_packet_policy.hierarchy_contract
 }
 $memorySkeletonDigest = New-VibeSkeletonMemoryDigest -Runtime $runtime -Skeleton $skeleton -Task $Task -SessionRoot ([string]$skeleton.session_root)

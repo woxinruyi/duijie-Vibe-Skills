@@ -3,6 +3,12 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
+from ._bootstrap import ensure_contracts_src_on_path
+
+ensure_contracts_src_on_path()
+
+from vgo_contracts.discoverable_entry_surface import load_discoverable_entry_surface
+
 try:
     from ._io import load_json
 except ImportError:  # pragma: no cover - standalone module loading in file-based tests
@@ -57,6 +63,14 @@ def _compatibility_projection_names(packaging: dict[str, Any]) -> list[str]:
 
 def public_skill_projection_names(packaging: dict[str, Any]) -> list[str]:
     surface = packaging.get('public_skill_surface') or {}
+    discoverable_surface = str(surface.get('discoverable_entry_surface') or '').strip()
+    if discoverable_surface:
+        repo_root = Path(packaging.get('_repo_root') or '').resolve() if packaging.get('_repo_root') else None
+        if repo_root is not None:
+            try:
+                return load_discoverable_entry_surface(repo_root).projected_skill_names
+            except RuntimeError:
+                pass
     names = surface.get('projected_skill_names') or []
     seen: set[str] = set()
     result: list[str] = []
@@ -94,6 +108,7 @@ def resolve_runtime_core_packaging(repo_root: Path, profile: str) -> dict[str, A
         merged.pop('default_profile', None)
         merged = _deep_merge(merged, profile_overlay)
         merged.setdefault('profile', profile)
+        merged['_repo_root'] = str(repo_root)
         merged.setdefault('bundled_skills_source', 'bundled/skills')
         merged.setdefault('skills_allowlist', [])
         merged.setdefault('public_skill_surface', {})
@@ -106,11 +121,18 @@ def resolve_runtime_core_packaging(repo_root: Path, profile: str) -> dict[str, A
         )
         if not merged.get('skills_allowlist'):
             merged['skills_allowlist'] = _compatibility_projection_names(merged)
+        discoverable_surface = str((merged.get('public_skill_surface') or {}).get('discoverable_entry_surface') or '').strip()
+        if discoverable_surface:
+            try:
+                merged['public_skill_surface']['projected_skill_names'] = load_discoverable_entry_surface(repo_root).projected_skill_names
+            except RuntimeError:
+                pass
         return merged
 
     projection_path = resolve_runtime_core_projection_path(repo_root, profile)
     packaging = load_json(projection_path)
     packaging.setdefault('profile', profile)
+    packaging['_repo_root'] = str(repo_root)
     packaging.setdefault('bundled_skills_source', 'bundled/skills')
     packaging.setdefault('skills_allowlist', [])
     packaging.setdefault('public_skill_surface', {})
@@ -123,4 +145,10 @@ def resolve_runtime_core_packaging(repo_root: Path, profile: str) -> dict[str, A
     )
     if not packaging.get('skills_allowlist'):
         packaging['skills_allowlist'] = _compatibility_projection_names(packaging)
+    discoverable_surface = str((packaging.get('public_skill_surface') or {}).get('discoverable_entry_surface') or '').strip()
+    if discoverable_surface:
+        try:
+            packaging['public_skill_surface']['projected_skill_names'] = load_discoverable_entry_surface(repo_root).projected_skill_names
+        except RuntimeError:
+            pass
     return packaging

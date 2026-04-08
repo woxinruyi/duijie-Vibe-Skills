@@ -157,9 +157,9 @@ def host_inventory(repo_root: Path, host_id: str) -> set[str]:
         inventory.update(collect_file_inventory(repo_root / "bundled" / "skills" / "vibe-do-it", "skills/vibe-do-it"))
         inventory.update(
             {
-                "commands/vibe:what-do-i-want.md",
-                "commands/vibe:how-do-we-do.md",
-                "commands/vibe:do-it.md",
+                "commands/vibe-what-do-i-want.md",
+                "commands/vibe-how-do-we-do.md",
+                "commands/vibe-do-it.md",
             }
         )
     elif host_id == "opencode":

@@ -226,6 +226,7 @@ class UnifiedUninstallTests(unittest.TestCase):
 
         for rel in CODEX_WRAPPER_SKILL_PATHS:
             self.assertIn(rel, payload["deleted_paths"])
+            self.assertFalse((self.target_root / rel).exists())
 
     def test_planner_uses_host_closure_and_mutates_shared_json_owned_only(self) -> None:
         closure_path = self.target_root / ".vibeskills" / "host-closure.json"

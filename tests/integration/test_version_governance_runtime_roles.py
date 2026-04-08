@@ -111,3 +111,13 @@ def test_required_runtime_marker_groups_keep_owners_separate_from_compatibility(
     assert "scripts/verify/vibe-release-install-runtime-coherence-gate.ps1" in verification_surfaces
 
     assert all(path.startswith(("apps/", "packages/")) for path in semantic_owners)
+
+
+def test_required_runtime_markers_include_discoverable_entry_contract() -> None:
+    governance = _load_governance()
+    runtime = governance["runtime"]["installed_runtime"]
+    manifest = json.loads((REPO_ROOT / "config" / "runtime-config-manifest.json").read_text(encoding="utf-8"))
+
+    assert "config/vibe-entry-surfaces.json" in runtime["required_runtime_markers"]
+    assert "config/vibe-entry-surfaces.json" in runtime["required_runtime_marker_groups"]["governance_and_manifests"]
+    assert "config/vibe-entry-surfaces.json" in manifest["files"]

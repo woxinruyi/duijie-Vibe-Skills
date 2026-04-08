@@ -10,12 +10,15 @@ import pytest
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 CLI_SRC = REPO_ROOT / 'apps' / 'vgo-cli' / 'src'
-if str(CLI_SRC) not in sys.path:
-    sys.path.insert(0, str(CLI_SRC))
+RUNTIME_SRC = REPO_ROOT / 'packages' / 'runtime-core' / 'src'
+for src in (CLI_SRC, RUNTIME_SRC):
+    if str(src) not in sys.path:
+        sys.path.insert(0, str(src))
 
 from vgo_cli.commands import install_command, route_command, runtime_command, verify_command
 from vgo_cli.errors import CliError
 from vgo_cli.output import parse_json_output, print_install_completion_hint, print_json_payload
+from vgo_runtime import router_bridge
 
 
 def test_parse_json_output_returns_payload() -> None:
@@ -67,7 +70,9 @@ def test_route_command_delegates_to_runtime_core_bridge(monkeypatch: pytest.Monk
         prompt='route this',
         grade='XL',
         task_type='debug',
-        requested_skill='vibe',
+        requested_skill='vibe-how',
+        entry_intent_id='vibe-how',
+        requested_grade_floor='XL',
         host_id='codex',
         target_root='/tmp/codex',
         force_runtime_neutral=True,
@@ -79,12 +84,125 @@ def test_route_command_delegates_to_runtime_core_bridge(monkeypatch: pytest.Monk
         '--prompt', 'route this',
         '--grade', 'XL',
         '--task-type', 'debug',
-        '--requested-skill', 'vibe',
+        '--requested-skill', 'vibe-how',
+        '--entry-intent-id', 'vibe-how',
+        '--requested-grade-floor', 'XL',
         '--host-id', 'codex',
         '--target-root', '/tmp/codex',
         '--force-runtime-neutral',
     ]
     assert recorded['printed_stdout'] == '{"ok": true}\n'
+
+
+def test_router_bridge_forwards_discoverable_flags_to_powershell_router(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    recorded: dict[str, object] = {}
+
+    def fake_run(command: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
+        recorded['command'] = list(command)
+        recorded['cwd'] = kwargs['cwd']
+        return subprocess.CompletedProcess(args=list(command), returncode=0, stdout='{"ok": true}\n', stderr='')
+
+    monkeypatch.setattr(router_bridge, 'resolve_repo_root', lambda _: tmp_path)
+    monkeypatch.setattr(router_bridge.subprocess, 'run', fake_run)
+
+    payload = router_bridge.invoke_canonical_router(
+        argparse.Namespace(
+            prompt='route this',
+            grade='XL',
+            task_type='debug',
+            requested_skill='vibe-how',
+            entry_intent_id='vibe-how',
+            requested_grade_floor='XL',
+            host_id='codex',
+            target_root='/tmp/codex',
+        ),
+        'pwsh',
+    )
+
+    assert payload == {'ok': True}
+    assert recorded['cwd'] == tmp_path
+    assert recorded['command'] == [
+        'pwsh',
+        '-NoLogo',
+        '-NoProfile',
+        '-ExecutionPolicy',
+        'Bypass',
+        '-File',
+        str(tmp_path / 'scripts' / 'router' / 'resolve-pack-route.ps1'),
+        '-Prompt',
+        'route this',
+        '-Grade',
+        'XL',
+        '-TaskType',
+        'debug',
+        '-RequestedSkill',
+        'vibe-how',
+        '-EntryIntentId',
+        'vibe-how',
+        '-RequestedGradeFloor',
+        'XL',
+        '-HostId',
+        'codex',
+        '-TargetRoot',
+        '/tmp/codex',
+    ]
+
+
+def test_router_bridge_runtime_neutral_fallback_passes_discoverable_flags(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    recorded: dict[str, object] = {}
+
+    def fake_route_prompt(**kwargs: object) -> dict[str, object]:
+        recorded.update(kwargs)
+        return {'ok': True}
+
+    monkeypatch.setattr(router_bridge, 'resolve_powershell_host', lambda: None)
+    monkeypatch.setattr(router_bridge, 'resolve_repo_root', lambda _: tmp_path)
+    monkeypatch.setattr(router_bridge, 'route_prompt', fake_route_prompt)
+
+    assert (
+        router_bridge.main(
+            [
+                '--prompt',
+                'route this',
+                '--grade',
+                'XL',
+                '--task-type',
+                'debug',
+                '--requested-skill',
+                'vibe-how',
+                '--entry-intent-id',
+                'vibe-how',
+                '--requested-grade-floor',
+                'XL',
+                '--host-id',
+                'codex',
+                '--target-root',
+                '/tmp/codex',
+                '--force-runtime-neutral',
+            ]
+        )
+        == 0
+    )
+
+    assert recorded == {
+        'prompt': 'route this',
+        'grade': 'XL',
+        'task_type': 'debug',
+        'requested_skill': 'vibe-how',
+        'entry_intent_id': 'vibe-how',
+        'requested_grade_floor': 'XL',
+        'target_root': '/tmp/codex',
+        'host_id': 'codex',
+        'repo_root': tmp_path,
+    }
+    assert capsys.readouterr().out == '{\n  "ok": true\n}\n'
 
 
 

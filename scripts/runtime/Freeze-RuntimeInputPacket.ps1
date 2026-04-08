@@ -3,6 +3,9 @@ param(
     [string]$Mode = 'interactive_governed',
     [string]$RunId = '',
     [string]$ArtifactRoot = '',
+    [AllowEmptyString()] [string]$EntryIntentId = '',
+    [AllowEmptyString()] [string]$RequestedStageStop = '',
+    [AllowEmptyString()] [string]$RequestedGradeFloor = '',
     [AllowEmptyString()] [string]$GovernanceScope = '',
     [AllowEmptyString()] [string]$RootRunId = '',
     [AllowEmptyString()] [string]$ParentRunId = '',
@@ -541,7 +544,16 @@ if ([string]::IsNullOrWhiteSpace($RunId)) {
 
 $sessionRoot = Ensure-VibeSessionRoot -RepoRoot $runtime.repo_root -RunId $RunId -Runtime $runtime -ArtifactRoot $ArtifactRoot
 $policy = $runtime.runtime_input_packet_policy
-$grade = Get-VibeInternalGrade -Task $Task
+$entryIntent = Resolve-VibeEntryIntentSelection `
+    -Runtime $runtime `
+    -EntryIntentId $EntryIntentId `
+    -RequestedStageStop $RequestedStageStop `
+    -RequestedGradeFloor $RequestedGradeFloor
+$gradeResolution = Resolve-VibeGovernedGrade `
+    -BaseGrade (Get-VibeInternalGrade -Task $Task) `
+    -RequestedGradeFloor ([string]$entryIntent.requested_grade_floor) `
+    -Policy $policy
+$grade = [string]$gradeResolution.internal_grade
 $taskType = Get-VibeRouterTaskType -Task $Task
 $routerScriptPath = Join-Path $runtime.repo_root ([string]$policy.router_script_path)
 $routerHostId = Resolve-VgoHostId -HostId $env:VCO_HOST_ID
@@ -551,7 +563,7 @@ $storageProjection = New-VibeWorkspaceArtifactProjection `
     -Runtime $runtime `
     -ArtifactRoot $ArtifactRoot `
     -RouterTargetRoot $routerTargetRoot
-$requestedSkill = if ($policy.default_requested_skill) { [string]$policy.default_requested_skill } else { 'vibe' }
+$requestedSkill = if ($entryIntent.canonical_runtime_skill) { [string]$entryIntent.canonical_runtime_skill } elseif ($policy.default_requested_skill) { [string]$policy.default_requested_skill } else { 'vibe' }
 $unattended = $false
 $hierarchyState = Get-VibeHierarchyState `
     -GovernanceScope $GovernanceScope `
@@ -622,7 +634,7 @@ $specialistDispatch = Split-VibeSpecialistDispatch `
 $hierarchyProjection = New-VibeHierarchyProjection -HierarchyState $hierarchyState -IncludeGovernanceScope
 $authorityFlagsProjection = New-VibeRuntimePacketAuthorityFlagsProjection `
     -HierarchyState $hierarchyState `
-    -RuntimeEntry 'vibe' `
+    -RuntimeEntry ([string]$entryIntent.entry_intent_id) `
     -ExplicitRuntimeSkill $runtimeSelectedSkill `
     -RouterTruthLevel ([string]$routeResult.truth_level) `
     -ShadowOnly ([bool]$policy.shadow_only) `
@@ -632,6 +644,9 @@ $packet = New-VibeRuntimeInputPacketProjection `
     -Task $Task `
     -Mode $Mode `
     -InternalGrade $grade `
+    -EntryIntentId ([string]$entryIntent.entry_intent_id) `
+    -RequestedStageStop ([string]$entryIntent.requested_stage_stop) `
+    -RequestedGradeFloor ([string]$gradeResolution.requested_grade_floor) `
     -HierarchyState $hierarchyState `
     -HierarchyProjection $hierarchyProjection `
     -AuthorityFlagsProjection $authorityFlagsProjection `

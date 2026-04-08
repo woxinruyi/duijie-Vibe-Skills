@@ -727,7 +727,6 @@ if ([string]::IsNullOrWhiteSpace($RunId)) {
 }
 
 $sessionRoot = Ensure-VibeSessionRoot -RepoRoot $runtime.repo_root -RunId $RunId -Runtime $runtime -ArtifactRoot $ArtifactRoot
-$grade = Get-VibeInternalGrade -Task $Task
 $requirementPath = if (-not [string]::IsNullOrWhiteSpace($RequirementDocPath)) { $RequirementDocPath } else { Get-VibeRequirementDocPath -RepoRoot $runtime.repo_root -Task $Task -ArtifactRoot $ArtifactRoot }
 $planPath = if (-not [string]::IsNullOrWhiteSpace($ExecutionPlanPath)) { $ExecutionPlanPath } else { Get-VibeExecutionPlanPath -RepoRoot $runtime.repo_root -Task $Task -ArtifactRoot $ArtifactRoot }
 $runtimeInputPath = if (-not [string]::IsNullOrWhiteSpace($RuntimeInputPacketPath)) { $RuntimeInputPacketPath } else { Get-VibeRuntimeInputPacketPath -RepoRoot $runtime.repo_root -RunId $RunId -ArtifactRoot $ArtifactRoot }
@@ -736,6 +735,11 @@ $runtimeInputPacket = if (Test-Path -LiteralPath $runtimeInputPath) {
 } else {
     $null
 }
+$gradeResolution = Resolve-VibeGovernedGrade `
+    -BaseGrade (Get-VibeInternalGrade -Task $Task) `
+    -RequestedGradeFloor $(if ($runtimeInputPacket) { [string]$runtimeInputPacket.requested_grade_floor } else { '' }) `
+    -Policy $runtime.runtime_input_packet_policy
+$grade = [string]$gradeResolution.internal_grade
 $hierarchyState = Get-VibeHierarchyState `
     -GovernanceScope $(if ($runtimeInputPacket) { [string]$runtimeInputPacket.governance_scope } else { $GovernanceScope }) `
     -RunId $RunId `

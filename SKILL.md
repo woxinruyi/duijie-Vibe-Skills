@@ -7,7 +7,7 @@ description: Vibe Code Orchestrator (VCO) is a governed runtime entry that freez
 
 `vibe` is a host-syntax-neutral skill contract.
 
-`/vibe`, `$vibe`, and agent-invoked `vibe` all mean the same thing: enter the same governed runtime, not different entrypoints.
+`/vibe`, `$vibe`, and agent-invoked `vibe` all mean the same thing: enter the same governed runtime, not different runtime authorities.
 
 ## What `vibe` Does
 
@@ -19,10 +19,20 @@ description: Vibe Code Orchestrator (VCO) is a governed runtime entry that freez
 - multi-agent XL orchestration
 - proof, verification, and mandatory cleanup
 
-This runtime is user-facing as one path only.
+This runtime still has one canonical authority: `vibe`.
+
+Hosts may expose discoverable labels such as:
+
+- `Vibe`
+- `Vibe: What Do I Want?`
+- `Vibe: How Do We Do It?`
+- `Vibe: Do It`
+
+Those labels are presentational launch surfaces only.
+They do not create a second runtime.
 
 The user does not choose between `M`, `L`, or `XL` as entry branches.
-Those grades still exist, but only as internal execution strategy.
+Those grades still exist, but only as internal execution strategy, with only `--l` and `--xl` allowed as lightweight public grade-floor overrides.
 
 ## When To Use
 
@@ -118,10 +128,11 @@ The governed runtime selects the internal grade after `deep_interview` and befor
 
 User-facing behavior stays the same regardless of host syntax:
 
-- one governed entry
+- one governed runtime authority
 - one frozen requirement surface
 - one XL-style plan surface
 - one execution and cleanup contract
+- optional discoverable intent labels that still resolve to canonical `vibe`
 
 Compatibility notes for downstream verification and host adapters:
 

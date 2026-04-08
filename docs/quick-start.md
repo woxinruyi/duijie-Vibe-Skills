@@ -20,6 +20,27 @@
 
 这里的主入口不是一堆命令，而是一段可以直接复制给 AI 的安装提示词。
 
+如果宿主已经把 `vibe` 暴露成可发现入口，你现在会看到这几种常见入口：
+
+- `Vibe`
+- `Vibe: What Do I Want?`
+- `Vibe: How Do We Do It?`
+- `Vibe: Do It`
+
+它们都还是同一个 `vibe` governed runtime，只是默认停靠点不同：
+
+- `Vibe`：走完整受管流程
+- `Vibe: What Do I Want?`：先把目标、边界、验收标准说清楚
+- `Vibe: How Do We Do It?`：冻结 requirement 和 plan
+- `Vibe: Do It`：执行完整流程，但不会跳过 requirement / plan
+
+如果你希望提高执行强度，只用：
+
+- `--l`
+- `--xl`
+
+不要再记 `vibe-l`、`vibe-xl` 这种组合入口，系统不支持这类别名。
+
 如果你的目标宿主是 OpenCode，也可以直接看：
 
 - [`install/opencode-path.md`](./install/opencode-path.md)

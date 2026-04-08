@@ -38,7 +38,6 @@ $hierarchyState = Get-VibeHierarchyState `
     -InheritedExecutionPlanPath $InheritedExecutionPlanPath `
     -DelegationEnvelopePath $DelegationEnvelopePath `
     -HierarchyContract $runtime.runtime_input_packet_policy.hierarchy_contract
-$grade = Get-VibeInternalGrade -Task $Task
 $isChildScope = ([string]$hierarchyState.governance_scope -eq 'child')
 $planPath = if ($isChildScope) {
     if ([string]::IsNullOrWhiteSpace([string]$hierarchyState.inherited_execution_plan_path)) {
@@ -55,6 +54,11 @@ $runtimeInputPacket = if (-not [string]::IsNullOrWhiteSpace($RuntimeInputPacketP
 } else {
     $null
 }
+$gradeResolution = Resolve-VibeGovernedGrade `
+    -BaseGrade (Get-VibeInternalGrade -Task $Task) `
+    -RequestedGradeFloor $(if ($runtimeInputPacket) { [string]$runtimeInputPacket.requested_grade_floor } else { '' }) `
+    -Policy $runtime.runtime_input_packet_policy
+$grade = [string]$gradeResolution.internal_grade
 $planMemoryContext = if (-not [string]::IsNullOrWhiteSpace($PlanMemoryContextPath) -and (Test-Path -LiteralPath $PlanMemoryContextPath)) {
     Get-Content -LiteralPath $PlanMemoryContextPath -Raw -Encoding UTF8 | ConvertFrom-Json
 } else {
@@ -109,6 +113,9 @@ $lines = @(
 $lines += @('')
 if ($runtimeInputPacket) {
     $lines += @(
+        "- Entry intent: $([string]$runtimeInputPacket.entry_intent_id)",
+        "- Requested stop stage: $([string]$runtimeInputPacket.requested_stage_stop)",
+        "- Requested grade floor: $([string]$runtimeInputPacket.requested_grade_floor)",
         "- Governance scope: $([string]$runtimeInputPacket.governance_scope)",
         "- Root run id: $([string]$runtimeInputPacket.hierarchy.root_run_id)",
         "- Frozen route pack: $([string]$runtimeInputPacket.route_snapshot.selected_pack)",

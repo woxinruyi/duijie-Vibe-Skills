@@ -199,6 +199,9 @@ if ($runtimeInputPacket) {
     $lines += @(
         '',
         '## Runtime Input Truth',
+        "- Entry intent: $([string]$runtimeInputPacket.entry_intent_id)",
+        "- Requested stop stage: $([string]$runtimeInputPacket.requested_stage_stop)",
+        "- Requested grade floor: $([string]$runtimeInputPacket.requested_grade_floor)",
         "- Governance scope: $([string]$runtimeInputPacket.governance_scope)",
         "- Root run id: $([string]$runtimeInputPacket.hierarchy.root_run_id)",
         "- Selected pack: $([string]$runtimeInputPacket.route_snapshot.selected_pack)",

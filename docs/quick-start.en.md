@@ -20,6 +20,27 @@ Go straight to:
 
 The main entry there is not a wall of commands. It is a prompt you can copy into your AI assistant.
 
+If your host already exposes discoverable `vibe` launch surfaces, the common entries are:
+
+- `Vibe`
+- `Vibe: What Do I Want?`
+- `Vibe: How Do We Do It?`
+- `Vibe: Do It`
+
+They still resolve to the same governed `vibe` runtime. The difference is the default stop target:
+
+- `Vibe`: run the full governed flow
+- `Vibe: What Do I Want?`: clarify goals, boundaries, and acceptance criteria first
+- `Vibe: How Do We Do It?`: freeze the requirement and plan
+- `Vibe: Do It`: execute the full governed flow without skipping requirement or plan
+
+If you want a heavier execution lane, use only:
+
+- `--l`
+- `--xl`
+
+Do not rely on aliases like `vibe-l` or `vibe-xl`. Those combinations are intentionally unsupported.
+
 If your target host is OpenCode, you can also go straight to:
 
 - [`install/opencode-path.en.md`](./install/opencode-path.en.md)

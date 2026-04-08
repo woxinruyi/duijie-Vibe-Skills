@@ -99,6 +99,10 @@ def route_command(args: argparse.Namespace) -> int:
     ]
     if args.requested_skill:
         command.extend(['--requested-skill', args.requested_skill])
+    if getattr(args, 'entry_intent_id', None):
+        command.extend(['--entry-intent-id', args.entry_intent_id])
+    if getattr(args, 'requested_grade_floor', None):
+        command.extend(['--requested-grade-floor', args.requested_grade_floor])
     if args.host_id:
         command.extend(['--host-id', args.host_id])
     if args.target_root:

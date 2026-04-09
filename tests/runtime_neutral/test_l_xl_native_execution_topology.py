@@ -55,6 +55,25 @@ def run_runtime(
     script_path = REPO_ROOT / script_relative_path
     run_id = "pytest-topology-" + uuid.uuid4().hex[:10]
     approved = approved_specialist_skill_ids or []
+    delegation_envelope_path: Path | None = None
+    if (
+        governance_scope == "child"
+        and root_run_id
+        and parent_run_id
+        and parent_unit_id
+        and inherited_requirement_doc_path is not None
+        and inherited_execution_plan_path is not None
+    ):
+        delegation_envelope_path = write_delegation_envelope_fixture(
+            artifact_root,
+            child_run_id=run_id,
+            root_run_id=root_run_id,
+            parent_run_id=parent_run_id,
+            parent_unit_id=parent_unit_id,
+            inherited_requirement_doc_path=inherited_requirement_doc_path,
+            inherited_execution_plan_path=inherited_execution_plan_path,
+            approved_specialists=approved,
+        )
     approved_literal = (
         "@(" + ",".join("'" + skill.replace("'", "''") + "'" for skill in approved) + ")"
         if approved
@@ -73,6 +92,11 @@ def run_runtime(
     root_segment = f"-RootRunId '{root_run_id}' " if root_run_id else ""
     parent_segment = f"-ParentRunId '{parent_run_id}' " if parent_run_id else ""
     parent_unit_segment = f"-ParentUnitId '{parent_unit_id}' " if parent_unit_id else ""
+    delegation_segment = (
+        f"-DelegationEnvelopePath '{delegation_envelope_path}' "
+        if delegation_envelope_path is not None
+        else ""
+    )
     entry_intent_segment = f"-EntryIntentId '{entry_intent_id}' " if entry_intent_id else ""
     requested_stop_segment = f"-RequestedStageStop '{requested_stage_stop}' " if requested_stage_stop else ""
     requested_grade_segment = f"-RequestedGradeFloor '{requested_grade_floor}' " if requested_grade_floor else ""
@@ -94,6 +118,7 @@ def run_runtime(
             f"{parent_unit_segment}"
             f"{inherited_requirement}"
             f"{inherited_plan}"
+            f"{delegation_segment}"
             f"{entry_intent_segment}"
             f"{requested_stop_segment}"
             f"{requested_grade_segment}"
@@ -117,6 +142,41 @@ def run_runtime(
             f"stderr={completed.stderr.strip()}"
         )
     return json.loads(stdout)
+
+
+def write_delegation_envelope_fixture(
+    artifact_root: Path,
+    *,
+    child_run_id: str,
+    root_run_id: str,
+    parent_run_id: str,
+    parent_unit_id: str,
+    inherited_requirement_doc_path: Path,
+    inherited_execution_plan_path: Path,
+    approved_specialists: list[str] | None = None,
+) -> Path:
+    approved = approved_specialists or []
+    session_root = artifact_root / "outputs" / "runtime" / "vibe-sessions" / child_run_id
+    session_root.mkdir(parents=True, exist_ok=True)
+    envelope_path = session_root / "delegation-envelope.json"
+    envelope = {
+        "root_run_id": root_run_id,
+        "parent_run_id": parent_run_id,
+        "parent_unit_id": parent_unit_id,
+        "child_run_id": child_run_id,
+        "governance_scope": "child_governed",
+        "requirement_doc_path": str(inherited_requirement_doc_path.resolve()),
+        "execution_plan_path": str(inherited_execution_plan_path.resolve()),
+        "write_scope": "pytest:child-lane",
+        "approved_specialists": approved,
+        "review_mode": "native_contract",
+        "prompt_tail_required": "$vibe",
+        "allow_requirement_freeze": False,
+        "allow_plan_freeze": False,
+        "allow_root_completion_claim": False,
+    }
+    envelope_path.write_text(json.dumps(envelope, indent=2), encoding="utf-8")
+    return envelope_path
 
 
 def run_write_xl_plan(
@@ -231,10 +291,17 @@ def load_unit_result(unit: dict[str, object]) -> dict[str, object]:
     return load_json(unit["result_path"])
 
 
-def create_fake_codex_command(directory: Path) -> Path:
+def create_fake_codex_command(directory: Path, *, required_prompt_markers: list[str] | None = None) -> Path:
     suffix = ".cmd" if os.name == "nt" else ""
     command_path = directory / f"codex{suffix}"
+    markers = required_prompt_markers or []
     if os.name == "nt":
+        marker_checks = ""
+        for index, marker in enumerate(markers, start=1):
+            escaped_marker = marker.replace('"', '""')
+            marker_checks += (
+                f"echo %* | findstr /C:\"{escaped_marker}\" >nul || exit /b {90 + index}\r\n"
+            )
         command_path.write_text(
             "@echo off\r\n"
             "setlocal EnableDelayedExpansion\r\n"
@@ -251,14 +318,22 @@ def create_fake_codex_command(directory: Path) -> Path:
             "goto loop\r\n"
             ":done\r\n"
             "if \"%OUT%\"==\"\" exit /b 2\r\n"
+            f"{marker_checks}"
             "> \"%OUT%\" echo {\"status\":\"completed\",\"summary\":\"fake codex specialist executed\",\"verification_notes\":[\"fake native specialist executed\"],\"changed_files\":[],\"bounded_output_notes\":[\"fake codex adapter\"]}\r\n"
             "echo fake codex ok\r\n"
             "exit /b 0\r\n",
             encoding="utf-8",
         )
     else:
+        marker_checks = ""
+        for index, marker in enumerate(markers, start=1):
+            escaped_marker = marker.replace("\\", "\\\\").replace('"', '\\"')
+            marker_checks += (
+                f'printf "%s" "$RAW_ARGS" | grep -F "{escaped_marker}" >/dev/null || exit {90 + index}\n'
+            )
         command_path.write_text(
             "#!/usr/bin/env sh\n"
+            "RAW_ARGS=\"$*\"\n"
             "OUT=''\n"
             "while [ \"$#\" -gt 0 ]; do\n"
             "  case \"$1\" in\n"
@@ -274,6 +349,7 @@ def create_fake_codex_command(directory: Path) -> Path:
             "if [ -z \"$OUT\" ]; then\n"
             "  exit 2\n"
             "fi\n"
+            f"{marker_checks}"
             "printf '%s' '{\"status\":\"completed\",\"summary\":\"fake codex specialist executed\",\"verification_notes\":[\"fake native specialist executed\"],\"changed_files\":[],\"bounded_output_notes\":[\"fake codex adapter\"]}' > \"$OUT\"\n"
             "printf 'fake codex ok\\n'\n",
             encoding="utf-8",
@@ -409,6 +485,45 @@ class NativeExecutionTopologyTests(unittest.TestCase):
             self.assertEqual("XL", plan_receipt["internal_grade"])
             self.assertEqual("XL", execution_receipt["internal_grade"])
             self.assertEqual("XL", execution_manifest["internal_grade"])
+
+    def test_plan_execute_marks_legacy_dispatch_packets_incomplete_without_crashing(self) -> None:
+        with tempfile.TemporaryDirectory() as tempdir:
+            artifact_root = Path(tempdir)
+            initial_payload = run_runtime(
+                task="I have a failing test and a stack trace. Help me debug systematically before proposing fixes.",
+                artifact_root=artifact_root,
+                governance_scope="root",
+            )
+            initial_summary = initial_payload["summary"]
+            requirement_doc_path = Path(initial_summary["artifacts"]["requirement_doc"])
+            execution_plan_path = Path(initial_summary["artifacts"]["execution_plan"])
+            runtime_input_packet_path = Path(initial_summary["artifacts"]["runtime_input_packet"])
+            runtime_input_packet = load_json(runtime_input_packet_path)
+
+            approved_dispatch = list((runtime_input_packet.get("specialist_dispatch") or {}).get("approved_dispatch") or [])
+            self.assertGreaterEqual(len(approved_dispatch), 1)
+            legacy_skill_id = str(approved_dispatch[0]["skill_id"])
+            approved_dispatch[0].pop("skill_root", None)
+            approved_dispatch[0].pop("usage_required", None)
+            runtime_input_packet_path.write_text(
+                json.dumps(runtime_input_packet, ensure_ascii=False, indent=2),
+                encoding="utf-8",
+            )
+
+            execution_payload = run_plan_execute(
+                task="I have a failing test and a stack trace. Help me debug systematically before proposing fixes.",
+                artifact_root=artifact_root,
+                requirement_doc_path=requirement_doc_path,
+                execution_plan_path=execution_plan_path,
+                runtime_input_packet_path=runtime_input_packet_path,
+            )
+            execution_receipt = load_json(execution_payload["receipt_path"])
+            execution_manifest = load_json(execution_receipt["execution_manifest_path"])
+
+            self.assertIn(
+                legacy_skill_id,
+                list(execution_manifest["dispatch_integrity"]["dispatch_contract_incomplete_skill_ids"]),
+            )
 
     def test_specialist_binding_metadata_is_frozen_into_runtime_requirement_and_plan(self) -> None:
         with tempfile.TemporaryDirectory() as tempdir:
@@ -619,7 +734,15 @@ class NativeExecutionTopologyTests(unittest.TestCase):
     def test_approved_specialist_dispatch_can_execute_live_native_lane_when_adapter_enabled(self) -> None:
         with tempfile.TemporaryDirectory() as tempdir:
             temp_path = Path(tempdir)
-            fake_codex = create_fake_codex_command(temp_path)
+            fake_codex = create_fake_codex_command(
+                temp_path,
+                required_prompt_markers=[
+                    "native_skill_entrypoint:",
+                    "skill_root:",
+                    "usage_required: true",
+                    "must_preserve_workflow: true",
+                ],
+            )
             payload = run_runtime(
                 task="I have a failing test and stack trace. Debug systematically and execute specialist workflow.",
                 artifact_root=temp_path,
@@ -664,6 +787,64 @@ class NativeExecutionTopologyTests(unittest.TestCase):
                     self.assertTrue(Path(result["git_status_after_path"]).exists())
                     self.assertTrue(Path(result["stdout_path"]).exists())
                     self.assertTrue(Path(result["stderr_path"]).exists())
+                    prompt = Path(result["prompt_path"]).read_text(encoding="utf-8")
+                    self.assertIn("native_skill_entrypoint:", prompt)
+                    self.assertIn("skill_root:", prompt)
+                    self.assertIn("usage_required: true", prompt)
+                    self.assertIn("must_preserve_workflow: true", prompt)
+
+    def test_path_resolved_specialist_prompt_uses_entrypoint_and_root_as_source_of_truth(self) -> None:
+        with tempfile.TemporaryDirectory() as tempdir:
+            temp_path = Path(tempdir)
+            fake_codex = create_fake_codex_command(temp_path)
+            payload = run_runtime(
+                task=(
+                    "Analyze biological sequences with Python, draft a scientific report, "
+                    "and prepare the execution planning notes."
+                ),
+                artifact_root=temp_path,
+                governance_scope="root",
+                extra_env={
+                    "VGO_ENABLE_NATIVE_SPECIALIST_EXECUTION": "1",
+                    "VGO_DISABLE_NATIVE_SPECIALIST_EXECUTION": "0",
+                    "VGO_CODEX_EXECUTABLE": str(fake_codex),
+                },
+            )
+            summary = payload["summary"]
+            execution_manifest = load_json(summary["artifacts"]["execution_manifest"])
+            specialist_outcomes = list(execution_manifest["specialist_accounting"]["specialist_dispatch_outcomes"])
+            self.assertGreaterEqual(len(specialist_outcomes), 1)
+
+            path_resolved_prompt_verified = False
+            for unit in specialist_outcomes:
+                result = load_json(unit["result_path"])
+                prompt_path = str(result.get("prompt_path") or "").strip()
+                if not prompt_path:
+                    continue
+                if bool(result.get("blocked")) or bool(result.get("degraded")):
+                    continue
+                prompt = Path(prompt_path).read_text(encoding="utf-8")
+                dispatch = next(
+                    (
+                        entry
+                        for entry in execution_manifest["specialist_accounting"]["approved_dispatch"]
+                        if str(entry.get("skill_id", "")).strip() == str(result["specialist_skill_id"]).strip()
+                    ),
+                    None,
+                )
+                self.assertIsNotNone(dispatch)
+                native_entrypoint = str((dispatch or {}).get("native_skill_entrypoint") or "").strip()
+                normalized_entrypoint = native_entrypoint.replace("\\", "/")
+                if "/bundled/skills/" not in normalized_entrypoint:
+                    continue
+                skill_root = str((dispatch or {}).get("skill_root") or "").strip()
+                self.assertTrue(skill_root)
+                self.assertIn(f"native_skill_entrypoint: {native_entrypoint}", prompt)
+                self.assertIn(f"skill_root: {skill_root}", prompt)
+                self.assertIn("usage_required: true", prompt)
+                path_resolved_prompt_verified = True
+
+            self.assertTrue(path_resolved_prompt_verified)
 
     def test_child_escalation_remains_advisory_and_blocks_unapproved_specialist_execution(self) -> None:
         with tempfile.TemporaryDirectory() as tempdir:

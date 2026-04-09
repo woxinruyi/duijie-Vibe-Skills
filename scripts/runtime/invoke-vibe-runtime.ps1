@@ -127,29 +127,6 @@ $stageLineage = Add-VibeStageLineageEntry `
 $executedStageOrder += 'skeleton_check'
 
 $delegationValidation = $null
-if (
-    [string]$hierarchyState.governance_scope -eq 'child' -and
-    [string]::IsNullOrWhiteSpace([string]$hierarchyState.delegation_envelope_path) -and
-    -not [string]::IsNullOrWhiteSpace([string]$hierarchyState.inherited_requirement_doc_path) -and
-    -not [string]::IsNullOrWhiteSpace([string]$hierarchyState.inherited_execution_plan_path)
-) {
-    $syntheticDelegationEnvelopePath = Get-VibeGovernanceArtifactPath `
-        -SessionRoot ([string]$skeleton.session_root) `
-        -ArtifactName 'delegation_envelope' `
-        -HierarchyContract $runtime.runtime_input_packet_policy.hierarchy_contract
-    Write-VibeDelegationEnvelope `
-        -Path $syntheticDelegationEnvelopePath `
-        -RootRunId ([string]$hierarchyState.root_run_id) `
-        -ParentRunId $(if ([string]::IsNullOrWhiteSpace([string]$hierarchyState.parent_run_id)) { [string]$hierarchyState.root_run_id } else { [string]$hierarchyState.parent_run_id }) `
-        -ParentUnitId $(if ([string]::IsNullOrWhiteSpace([string]$hierarchyState.parent_unit_id)) { 'child-governed-runtime' } else { [string]$hierarchyState.parent_unit_id }) `
-        -ChildRunId $RunId `
-        -RequirementDocPath ([string]$hierarchyState.inherited_requirement_doc_path) `
-        -ExecutionPlanPath ([string]$hierarchyState.inherited_execution_plan_path) `
-        -WriteScope 'child-governed-runtime' `
-        -ApprovedSpecialists @($ApprovedSpecialistSkillIds) | Out-Null
-    $hierarchyState.delegation_envelope_path = [string]$syntheticDelegationEnvelopePath
-    $hierarchyArgs.DelegationEnvelopePath = [string]$syntheticDelegationEnvelopePath
-}
 if ([string]$hierarchyState.governance_scope -eq 'child') {
     $delegationValidation = Assert-VibeDelegationEnvelope `
         -SessionRoot ([string]$skeleton.session_root) `

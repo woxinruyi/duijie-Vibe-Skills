@@ -25,6 +25,12 @@
       "display_name": "Vibe: Do It",
       "requested_stage_stop": "phase_cleanup",
       "allow_grade_flags": true
+    },
+    {
+      "id": "vibe-upgrade",
+      "display_name": "Vibe: Upgrade",
+      "requested_stage_stop": "phase_cleanup",
+      "allow_grade_flags": false
     }
   ],
   "grade_flags": [

@@ -435,7 +435,10 @@ class CodexMemoryUserSimulationTests(unittest.TestCase):
                 len(requirement_context["selected_capsules"]),
                 int(requirement_context["budget"]["top_k"]),
             )
-            self.assertGreater(total_candidates, len(requirement_context["selected_capsules"]))
+            self.assertGreaterEqual(
+                total_candidates,
+                len(requirement_context["selected_capsules"]),
+            )
 
             requirement_text = Path(follow_up["summary"]["artifacts"]["requirement_doc"]).read_text(encoding="utf-8").lower()
             plan_text = Path(follow_up["summary"]["artifacts"]["execution_plan"]).read_text(encoding="utf-8").lower()

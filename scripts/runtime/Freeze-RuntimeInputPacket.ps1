@@ -658,6 +658,14 @@ function Get-VibeSpecialistRecommendations {
         $seen[$fallbackSkillId] = $true
     }
 
+    if (@($recommendations).Count -lt $requiredRecommendationCount) {
+        throw (
+            "Runtime input policy requires at least {0} specialist recommendation(s), but only {1} could be produced for task type '{2}'. " +
+            "Check fallback_specialists_by_task_type/default and router specialist outputs." `
+                -f $requiredRecommendationCount, @($recommendations).Count, $TaskType
+        )
+    }
+
     return @($recommendations)
 }
 

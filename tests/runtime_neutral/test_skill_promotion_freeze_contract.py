@@ -196,6 +196,63 @@ class SkillPromotionFreezeContractTests(unittest.TestCase):
                 check=True,
             )
 
+    def test_recommendation_builder_rejects_when_floor_cannot_be_satisfied(self) -> None:
+        shell = resolve_powershell()
+        if shell is None:
+            raise unittest.SkipTest("PowerShell executable not available in PATH")
+
+        get_recommendations_function = extract_get_specialist_recommendations_function()
+        script_body = (
+            "& { "
+            "function Get-VibeCustomAdmissionIndex { param([object]$RouteResult) return @{} } "
+            "function Get-VibeFallbackSpecialistSkillIds { "
+            "param([string]$TaskType, [object]$Policy, [string]$RouterSelectedSkill, [string]$RuntimeSelectedSkill) "
+            "return @() "
+            "} "
+            "function New-VibeSpecialistRecommendation { "
+            "param("
+            "[string]$RepoRoot, [string]$Task, [string]$SkillId, [string]$Source, [string]$TaskType, "
+            "[string]$Reason, [AllowNull()][string]$PackId, [double]$Confidence, [int]$Rank, "
+            "[AllowNull()][object]$DispatchContract, [AllowNull()][object]$PromotionPolicy, "
+            "[AllowNull()][object]$CustomMetadata, [string]$TargetRoot, [string]$HostId"
+            ") "
+            "return [pscustomobject]@{ skill_id = $SkillId; source = $Source; rank = $Rank } "
+            "} "
+            f"{get_recommendations_function} "
+            "$routeResult = [pscustomobject]@{ ranked = @() }; "
+            "$policy = [pscustomobject]@{ "
+            "specialist_recommendation_limit = 2; "
+            "required_specialist_recommendation_count = 1; "
+            "overlay_fields = @(); "
+            "specialist_dispatch_contract = [pscustomobject]@{} "
+            "}; "
+            "Get-VibeSpecialistRecommendations "
+            "-RepoRoot '.' "
+            "-Task 'demo task' "
+            "-RouteResult $routeResult "
+            "-RuntimeSelectedSkill 'vibe' "
+            "-RouterSelectedSkill '' "
+            "-TaskType 'planning' "
+            "-Policy $policy | Out-Null "
+            "}"
+        )
+
+        with self.assertRaises(subprocess.CalledProcessError):
+            subprocess.run(
+                [
+                    shell,
+                    "-NoLogo",
+                    "-NoProfile",
+                    "-Command",
+                    script_body,
+                ],
+                cwd=REPO_ROOT,
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+                check=True,
+            )
+
     def test_eligible_matched_skill_is_approved_and_not_ghosted(self) -> None:
         with tempfile.TemporaryDirectory() as tempdir:
             payload = freeze_runtime_packet(ML_PROMPT, Path(tempdir))

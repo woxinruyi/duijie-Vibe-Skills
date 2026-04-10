@@ -106,7 +106,8 @@ class CheckInstalledRuntimeRootTests(unittest.TestCase):
             )
 
         self.assertEqual(0, result.returncode, msg=f"stdout:\n{result.stdout}\nstderr:\n{result.stderr}")
-        self.assertNotIn("skills\\vibe\\skills\\vibe", result.stdout)
+        normalized_stdout = result.stdout.replace("\\", "/")
+        self.assertNotIn("skills/vibe/skills/vibe", normalized_stdout)
 
     def test_check_ps1_reports_invalid_receipt_version_without_crashing(self) -> None:
         powershell = resolve_powershell()

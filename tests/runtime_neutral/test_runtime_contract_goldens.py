@@ -157,11 +157,15 @@ class RuntimeContractGoldenTests(unittest.TestCase):
     def test_root_governed_runtime_matches_curated_packet_and_manifest_golden(self) -> None:
         fixture = load_json(GOLDEN_FIXTURE)
 
-        with tempfile.TemporaryDirectory() as tempdir:
+        with tempfile.TemporaryDirectory() as tempdir, tempfile.TemporaryDirectory() as codex_home:
             payload = run_runtime(
                 TASK,
                 artifact_root=Path(tempdir),
-                extra_env={"VCO_HOST_ID": "codex"},
+                extra_env={
+                    "VCO_HOST_ID": "codex",
+                    # Keep the golden baseline independent from any machine-local Codex install state.
+                    "CODEX_HOME": codex_home,
+                },
             )
             summary = payload["summary"]
             runtime_input_packet = load_json(summary["artifacts"]["runtime_input_packet"])

@@ -62,8 +62,11 @@ def refresh_upstream_status(
     commit_result = run_subprocess(['git', 'rev-parse', 'FETCH_HEAD'], cwd=repo_root)
     if commit_result.returncode != 0:
         raise CliError(commit_result.stderr.strip() or 'Failed to resolve fetched upstream commit.')
+    remote_commit = commit_result.stdout.strip()
+    if not remote_commit:
+        raise CliError('Failed to resolve fetched upstream commit.')
 
-    release_result = run_subprocess(['git', 'show', 'FETCH_HEAD:config/version-governance.json'], cwd=repo_root)
+    release_result = run_subprocess(['git', 'show', f'{remote_commit}:config/version-governance.json'], cwd=repo_root)
     if release_result.returncode != 0:
         raise CliError(release_result.stderr.strip() or 'Failed to read fetched release metadata.')
     release_payload = json.loads(release_result.stdout or '{}')
@@ -72,7 +75,7 @@ def refresh_upstream_status(
     merged = merge_upgrade_status(
         current_status,
         remote={
-            'remote_latest_commit': commit_result.stdout.strip(),
+            'remote_latest_commit': remote_commit,
             'remote_latest_version': str(release.get('version') or '').strip(),
             'remote_latest_checked_at': None,
         },

@@ -324,6 +324,56 @@ def test_upgrade_runtime_forces_fresh_upstream_refresh_before_deciding_update(
     assert result["changed"] is False
 
 
+def test_refresh_upstream_status_reads_release_metadata_from_resolved_commit(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    upgrade_service = importlib.import_module("vgo_cli.upgrade_service")
+
+    repo_root = tmp_path / "repo"
+    repo_root.mkdir()
+    target_root = tmp_path / "target"
+    target_root.mkdir()
+    commands: list[list[str]] = []
+
+    def fake_run_subprocess(command: list[str], cwd: Path | None = None) -> subprocess.CompletedProcess[str]:
+        commands.append(command)
+        assert cwd == repo_root
+        if command[:3] == ["git", "fetch", "--quiet"]:
+            return subprocess.CompletedProcess(command, 0, stdout="", stderr="")
+        if command == ["git", "rev-parse", "FETCH_HEAD"]:
+            return subprocess.CompletedProcess(command, 0, stdout="abc123\n", stderr="")
+        if command == ["git", "show", "abc123:config/version-governance.json"]:
+            return subprocess.CompletedProcess(
+                command,
+                0,
+                stdout='{"release":{"version":"3.0.1"}}\n',
+                stderr="",
+            )
+        raise AssertionError(f"unexpected command: {command}")
+
+    monkeypatch.setattr(upgrade_service, "run_subprocess", fake_run_subprocess)
+
+    status = upgrade_service.refresh_upstream_status(
+        repo_root,
+        target_root,
+        {
+            "repo_remote": "https://github.com/foryourhealth111-pixel/Vibe-Skills.git",
+            "repo_default_branch": "main",
+            "installed_version": "3.0.0",
+            "installed_commit": "old",
+        },
+        force_refresh=True,
+    )
+
+    assert status["remote_latest_commit"] == "abc123"
+    assert status["remote_latest_version"] == "3.0.1"
+    assert commands == [
+        ["git", "fetch", "--quiet", "https://github.com/foryourhealth111-pixel/Vibe-Skills.git", "main"],
+        ["git", "rev-parse", "FETCH_HEAD"],
+        ["git", "show", "abc123:config/version-governance.json"],
+    ]
+
+
 def test_upgrade_runtime_propagates_refresh_failures(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     upgrade_service = importlib.import_module("vgo_cli.upgrade_service")
 

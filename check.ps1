@@ -197,7 +197,15 @@ function Normalize-ComparablePath {
     return $null
   }
 
-  return [System.IO.Path]::GetFullPath($Path).TrimEnd([char[]]@('\','/')).ToLowerInvariant()
+  try {
+    $fullPath = [System.IO.Path]::GetFullPath($Path).TrimEnd([char[]]@('\','/'))
+    if ([System.Runtime.InteropServices.RuntimeInformation]::IsOSPlatform([System.Runtime.InteropServices.OSPlatform]::Windows)) {
+      return $fullPath.ToLowerInvariant()
+    }
+    return $fullPath
+  } catch {
+    return $null
+  }
 }
 
 function ConvertTo-IntCheckValue {

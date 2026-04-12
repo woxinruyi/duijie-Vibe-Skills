@@ -56,6 +56,7 @@ UI_TASK = "Build a responsive dashboard UI with clear interaction feedback, mean
 DOC_TASK = "Reformat the project README headings and spacing without changing application code."
 DOC_CODE_TASK = "Implement the markdown export pipeline for the docs renderer and add targeted verification for the parser."
 DOC_DECK_TASK = "Build the release deck slides and refine presentation spacing without changing application code."
+DOC_HOST_KEYWORD_TASK = "Refresh codex onboarding documentation for 用户 handoff without changing application code."
 
 
 def resolve_python_command_spec_via_powershell(command_spec: str, path_entries: list[Path]) -> dict[str, object]:
@@ -481,6 +482,9 @@ class GovernedRuntimeBridgeTests(unittest.TestCase):
             self.assertIn("No code-task TDD evidence requirements were frozen for this run.", requirement_doc)
             self.assertIn("## Baseline Document Quality Dimensions", requirement_doc)
             self.assertIn("- Structure Integrity", requirement_doc)
+            self.assertIn("## Manual Spot Checks", requirement_doc)
+            self.assertIn("None required beyond automated verification for this task unless the execution scope expands to a user-visible or interactive flow.", requirement_doc)
+            self.assertNotIn("Open the primary user-facing flow and confirm the main path works from entry to completion.", requirement_doc)
             self.assertIn("- Formatting Consistency", requirement_doc)
             self.assertIn("- Content Completeness", requirement_doc)
             self.assertIn("- Link and Reference Integrity", requirement_doc)
@@ -588,6 +592,66 @@ class GovernedRuntimeBridgeTests(unittest.TestCase):
             self.assertIn("## Baseline Document Quality Dimensions", requirement_doc)
             self.assertIn("- Structure Integrity", requirement_doc)
             self.assertIn("- Output Fidelity", requirement_doc)
+
+    def test_invoke_vibe_runtime_does_not_freeze_ui_baseline_for_non_ui_doc_tasks_with_host_keywords(self) -> None:
+        script_path = REPO_ROOT / "scripts" / "runtime" / "invoke-vibe-runtime.ps1"
+        run_id = "pytest-governed-runtime-doc-host-keywords"
+        shell = resolve_powershell()
+        if shell is None:
+            self.skipTest("PowerShell executable not available in PATH")
+
+        with tempfile.TemporaryDirectory() as tempdir:
+            artifact_root = Path(tempdir)
+            command = [
+                shell,
+                "-NoLogo",
+                "-NoProfile",
+                "-Command",
+                (
+                    "& { "
+                    f"$result = & '{script_path}' "
+                    f"-Task '{DOC_HOST_KEYWORD_TASK}' "
+                    "-Mode interactive_governed "
+                    f"-RunId '{run_id}' "
+                    f"-ArtifactRoot '{artifact_root}'; "
+                    "$result | ConvertTo-Json -Depth 20 }"
+                ),
+            ]
+            completed = subprocess.run(
+                command,
+                cwd=REPO_ROOT,
+                capture_output=True,
+                text=True,
+                check=True,
+                env={**os.environ, "VGO_DISABLE_NATIVE_SPECIALIST_EXECUTION": "1"},
+            )
+
+            payload = json.loads(completed.stdout)
+            relative_artifacts = payload["summary"].get("artifacts_relative", {})
+            requirement_doc_path = artifact_root / Path(relative_artifacts["requirement_doc"])
+            self.assertTrue(requirement_doc_path.exists())
+
+            requirement_doc = requirement_doc_path.read_text(encoding="utf-8")
+            self.assertIn("## Baseline UI Quality Dimensions", requirement_doc)
+            self.assertIn("No baseline UI quality dimensions were frozen for this run.", requirement_doc)
+            self.assertNotIn("- Structure Completeness", requirement_doc)
+            self.assertIn("## Baseline Document Quality Dimensions", requirement_doc)
+            self.assertIn("- Structure Integrity", requirement_doc)
+            self.assertIn("## Manual Spot Checks", requirement_doc)
+            self.assertIn("None required beyond automated verification for this task unless the execution scope expands to a user-visible or interactive flow.", requirement_doc)
+            self.assertNotIn("Open the primary user-facing flow and confirm the main path works from entry to completion.", requirement_doc)
+
+    def test_project_delivery_readme_lists_all_truth_layers(self) -> None:
+        readme_path = REPO_ROOT / "tests" / "scenarios" / "project_delivery" / "README.md"
+        readme_text = readme_path.read_text(encoding="utf-8")
+
+        self.assertIn("Each scenario must provide six truth-layer states:", readme_text)
+        self.assertIn("- `governance_truth`", readme_text)
+        self.assertIn("- `engineering_verification_truth`", readme_text)
+        self.assertIn("- `code_task_tdd_evidence_truth`", readme_text)
+        self.assertIn("- `workflow_completion_truth`", readme_text)
+        self.assertIn("- `artifact_review_truth`", readme_text)
+        self.assertIn("- `product_acceptance_truth`", readme_text)
 
     def test_write_requirement_doc_preserves_explicit_document_artifact_review_requirements(self) -> None:
         script_path = REPO_ROOT / "scripts" / "runtime" / "Write-RequirementDoc.ps1"

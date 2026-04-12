@@ -145,10 +145,20 @@ def _resolve_optional_payload(
 
     explicit_path_value = str(execute_receipt.get(explicit_path_key) or "").strip()
     if explicit_path_value:
+        resolved_session_root = session_root.resolve()
         explicit_path = Path(explicit_path_value)
         if not explicit_path.is_absolute():
-            explicit_path = (session_root / explicit_path).resolve()
-        if explicit_path.exists():
+            explicit_path = (resolved_session_root / explicit_path).resolve()
+        else:
+            explicit_path = explicit_path.resolve()
+
+        path_in_session_scope = True
+        try:
+            explicit_path.relative_to(resolved_session_root)
+        except ValueError:
+            path_in_session_scope = False
+
+        if path_in_session_scope and explicit_path.exists():
             payload = load_json(explicit_path)
             if isinstance(payload, dict):
                 normalized_payload = dict(payload)

@@ -65,6 +65,7 @@
       "artifact_review_truth",
       "product_acceptance_truth",
       "completion_language_allowed",
+      "artifact_review_coverage",
       "tdd_evidence_coverage",
       "residual_risks",
       "manual_spot_checks"

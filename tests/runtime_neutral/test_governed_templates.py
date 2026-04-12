@@ -56,3 +56,13 @@ class GovernedTemplateTests(unittest.TestCase):
         self.assertIn("## Baseline UI Quality Mapping", script_text)
         self.assertIn("## Task-Specific Acceptance Mapping", script_text)
         self.assertIn("## Research Augmentation Plan", script_text)
+
+
+    def test_project_delivery_contract_requires_artifact_and_tdd_coverage_fields(self) -> None:
+        contract = json.loads(
+            (REPO_ROOT / "config" / "project-delivery-acceptance-contract.json").read_text(encoding="utf-8")
+        )
+        must_report_fields = set((contract.get("report_requirements") or {}).get("must_report_fields") or [])
+
+        self.assertIn("artifact_review_coverage", must_report_fields)
+        self.assertIn("tdd_evidence_coverage", must_report_fields)

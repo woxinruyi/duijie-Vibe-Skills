@@ -144,28 +144,26 @@ def evaluate_delivery_acceptance(repo_root: Path, session_root: Path) -> dict[st
                 )
 
         if code_task_tdd_evidence_state == "passing":
-            if code_task_tdd_exceptions:
-                if missing_code_task_tdd_exceptions:
-                    code_task_tdd_evidence_state = "manual_review_required"
-                    code_task_tdd_evidence_notes.append(
-                        "Code-task TDD exception coverage did not close all frozen exceptions."
-                    )
-            else:
-                if missing_code_task_tdd_evidence_requirements:
-                    code_task_tdd_evidence_state = "manual_review_required"
-                    code_task_tdd_evidence_notes.append(
-                        "Code-task TDD evidence did not record coverage for all frozen TDD requirements."
-                    )
-                if not red_phase_evidence_paths:
-                    code_task_tdd_evidence_state = "manual_review_required"
-                    code_task_tdd_evidence_notes.append(
-                        "Code-task TDD evidence did not record failing-first evidence paths."
-                    )
-                if not green_phase_evidence_paths:
-                    code_task_tdd_evidence_state = "manual_review_required"
-                    code_task_tdd_evidence_notes.append(
-                        "Code-task TDD evidence did not record green-phase verification evidence paths."
-                    )
+            if code_task_tdd_exceptions and missing_code_task_tdd_exceptions:
+                code_task_tdd_evidence_state = "manual_review_required"
+                code_task_tdd_evidence_notes.append(
+                    "Code-task TDD exception coverage did not close all frozen exceptions."
+                )
+            if code_task_tdd_evidence_requirements and missing_code_task_tdd_evidence_requirements:
+                code_task_tdd_evidence_state = "manual_review_required"
+                code_task_tdd_evidence_notes.append(
+                    "Code-task TDD evidence did not record coverage for all frozen TDD requirements."
+                )
+            if not red_phase_evidence_paths:
+                code_task_tdd_evidence_state = "manual_review_required"
+                code_task_tdd_evidence_notes.append(
+                    "Code-task TDD evidence did not record failing-first evidence paths."
+                )
+            if not green_phase_evidence_paths:
+                code_task_tdd_evidence_state = "manual_review_required"
+                code_task_tdd_evidence_notes.append(
+                    "Code-task TDD evidence did not record green-phase verification evidence paths."
+                )
 
     tdd_evidence_payload_notes = str(tdd_evidence_payload.get("notes") or "").strip()
     if tdd_evidence_payload_notes:
@@ -392,6 +390,12 @@ def evaluate_delivery_acceptance(repo_root: Path, session_root: Path) -> dict[st
         residual_risks.append("Required artifact review remains unresolved.")
     if baseline_document_quality_dimensions and artifact_review_state != "passing":
         residual_risks.append("Frozen baseline document quality dimensions remain unresolved.")
+    if baseline_ui_quality_dimensions and artifact_review_state != "passing":
+        residual_risks.append("Frozen baseline UI quality dimensions remain unresolved.")
+    if task_specific_acceptance_extensions and artifact_review_state != "passing":
+        residual_risks.append("Frozen task-specific acceptance extensions remain unresolved.")
+    if research_augmentation_sources and artifact_review_state != "passing":
+        residual_risks.append("Frozen research augmentation sources remain unresolved.")
     if not product_acceptance_criteria:
         residual_risks.append("Product acceptance criteria were not frozen in the requirement doc.")
     if str(cleanup_receipt.get("cleanup_mode") or "") == "cleanup_degraded":

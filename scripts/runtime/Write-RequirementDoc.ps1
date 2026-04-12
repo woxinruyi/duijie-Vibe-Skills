@@ -27,8 +27,7 @@ function Test-VibeTaskNeedsManualSpotChecks {
         [AllowEmptyString()] [string]$Deliverable = ''
     )
 
-    $text = ('{0} {1}' -f $Task, $Deliverable).ToLowerInvariant()
-    return $text -match 'ui|ux|frontend|browser|page|screen|openclaw|cursor|windsurf|codex|用户|界面|交互|可视化|体验'
+    return Test-VibeTaskNeedsUiBaseline -Task $Task -Deliverable $Deliverable
 }
 
 function Test-VibeTaskNeedsDocumentArtifactBaseline {
@@ -51,6 +50,21 @@ function Test-VibeTaskNeedsDocumentArtifactBaseline {
     }
 
     return -not ($text -match $codeImplementationSignals)
+}
+
+function Test-VibeTaskNeedsUiBaseline {
+    param(
+        [Parameter(Mandatory)] [string]$Task,
+        [AllowEmptyString()] [string]$Deliverable = ''
+    )
+
+    if (Test-VibeTaskNeedsDocumentArtifactBaseline -Task $Task -Deliverable $Deliverable) {
+        return $false
+    }
+
+    $text = ('{0} {1}' -f $Task, $Deliverable).ToLowerInvariant()
+    $uiSignals = '(^|\b)(ui|ux|frontend|browser|screen|visual|interaction|responsive|layout|component|page|dashboard|prototype|wireframe)(\b|$)|界面|交互|可视化|体验|前端|网页'
+    return $text -match $uiSignals
 }
 
 function Test-VibeTaskNeedsCodeTaskTddEvidence {
@@ -230,7 +244,7 @@ if (@($baselineDocumentQualityDimensions).Count -eq 0 -and (Test-VibeTaskNeedsDo
 if (@($artifactReviewRequirements).Count -eq 0 -and @($baselineDocumentQualityDimensions).Count -gt 0) {
     $artifactReviewRequirements = Get-VibeDefaultDocumentArtifactReviewRequirements
 }
-if (@($baselineUiQualityDimensions).Count -eq 0 -and (Test-VibeTaskNeedsManualSpotChecks -Task $Task -Deliverable ([string]$intentContract.deliverable))) {
+if (@($baselineUiQualityDimensions).Count -eq 0 -and (Test-VibeTaskNeedsUiBaseline -Task $Task -Deliverable ([string]$intentContract.deliverable))) {
     $baselineUiQualityDimensions = Get-VibeDefaultBaselineUiQualityDimensions
 }
 $runtimeInputPacket = if (-not [string]::IsNullOrWhiteSpace($RuntimeInputPacketPath) -and (Test-Path -LiteralPath $RuntimeInputPacketPath)) {

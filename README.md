@@ -378,120 +378,155 @@ See [workspace memory plane design](./docs/design/workspace-memory-plane.md) for
 
 ## ✦ Full Capability Map: Your All-in-One Workbench
 
-_Routing + memory form the dispatch nervous system. Here's the full capability map they power — end to end._
+_This section is not a full inventory of skill IDs. It is a practical map of the kinds of work VibeSkills can cover._
 
-Unrolled across a "real workflow", VibeSkills has laid out a complete **end-to-end capability chain**:
+_If you only want to judge whether VibeSkills fits your task, the table below is the fastest way to read it._
 
 <br/>
 
 <div align="center">
 
-| Domain | Coverage | Representative Engines |
+| Work Area | What It Helps With | Representative Engines |
 |:---|:---|:---|
-| **💡 Requirements & Clarification** | No more black-box starts: turn vague ideas into clearly-bounded, verifiable problem definitions | `brainstorming`, `speckit-clarify` |
-| **📋 Planning & Breakdown** | Decompose ambitious goals into specs, plans, tasks, milestones, and execution flows | `writing-plans`, `speckit-specify`, `aios-po` |
-| **🏗️ Architecture & Tech Selection** | Design frontend/backend boundaries, APIs, data layers, deployment, and tech stack comparisons | `aios-architect`, `architecture-patterns` |
-| **💻 Development & Implementation** | New features, scaffolding, engineering integration, and precise cross-file implementation | `autonomous-builder`, `speckit-implement` |
-| **🔧 Debugging & Refactoring** | Beyond surface patches: locate errors, analyze root causes, restore project-level maintainability | `error-resolver`, `systematic-debugging` |
-| **🛡️ Testing & Quality Control** | Unit tests, regression verification, quality gates — mandatory verification before completion | `tdd-guide`, `aios-qa`, `code-review` |
-| **🚀 Collaboration & Release** | Handle Issues/PRs, fix CI, process reviews, and automated deployment | `aios-devops`, `gh-fix-ci`, `vercel-deploy` |
-| **🤖 Compound Workflows** | Freeze requirements, dispatch tasks, multi-Agent coordination, execution tracing, env cleanup | `vibe`, `swarm_*`, `hive-mind-advanced` |
-| **🔌 External Ecosystem** | Bridge browsers, web scraping, design files, third-party services, and context memory | `mcp-integration`, `playwright`, `scrapling` |
-| **📊 Data & AI Engineering** | EDA, cleaning & stats, to model training, RAG retrieval, and experiment tracking | `senior-ml-engineer`, `statistical-analysis` |
-| **🔬 Research & Life Sciences** | **Core strength**: literature review, bioinformatics, single-cell analysis, drug discovery | `literature-review`, `biopython`, `scanpy` |
-| **📐 Math & Scientific Computing** | Symbolic derivation, Bayesian modeling, multi-objective optimization, simulation, quantum computing | `sympy`, `pymc-bayesian-modeling`, `qiskit` |
-| **🎨 Multimedia & Presentation** | Interactive charts, publication-quality figures, slides, audio/video production | `plotly`, `generate-image`, `video-studio` |
+| **💡 Requirements, Planning & Product Work** | Clarify vague ideas, write specs, and break work into executable plans and tasks | `brainstorming`, `writing-plans`, `speckit-specify` |
+| **🏗️ Engineering, Architecture & Governed Execution** | Design systems, implement changes, and coordinate multi-step governed workflows | `aios-architect`, `autonomous-builder`, `vibe` |
+| **🔧 Debugging, Testing & Quality Control** | Investigate failures, add tests, review code, and verify changes before completion | `systematic-debugging`, `verification-before-completion`, `code-review` |
+| **📊 Data Analysis & Statistical Modeling** | Clean data, run statistical analysis, explore patterns, and explain results | `statistical-analysis`, `performing-regression-analysis`, `data-exploration-visualization` |
+| **🤖 Machine Learning & AI Engineering** | Train, evaluate, explain, and iterate on model-driven workflows | `senior-ml-engineer`, `training-machine-learning-models`, `evaluating-machine-learning-models` |
+| **🔬 Research, Literature & Life Sciences** | Review papers, support scientific workflows, and handle bioinformatics-heavy tasks | `literature-review`, `research-lookup`, `scanpy` |
+| **📐 Scientific Computing & Mathematical Modeling** | Handle symbolic math, probabilistic modeling, simulation, and optimization | `sympy`, `pymc-bayesian-modeling`, `pymoo` |
+| **🎨 Documentation, Visualization & Output** | Turn work into readable docs, charts, figures, slides, and other deliverables | `docs-write`, `plotly`, `scientific-visualization` |
+| **🔌 External Integrations, Automation & Delivery** | Work with browsers, web content, external services, CI/CD, and deployment surfaces | `playwright`, `scrapling`, `aios-devops` |
 
 </div>
 
 <br/>
 
 <details>
-<summary><b>👉 Expand: Explore the complete 340+ full-stack capability matrix</b></summary>
+<summary><b>👉 Expand if needed: detailed categories, usage scenarios, and why similar skills coexist</b></summary>
 
 <br/>
 
-> 💡 **Why governance matters**: The vast skill library below is not a collection of isolated scripts — it is an ecosystem governed by the VCO runtime. Through domain matrix classification, the system automatically invokes the right tool at the right context node, without requiring you to manually search through skills.
+This section explains the full coverage in plain language.
+It is meant to answer three practical questions:
+
+1. When would this category be used?
+2. Why do several similar skills exist at the same time?
+3. Which entries are the representative starting points?
+
+The names below are representative, not a full inventory dump. The point of this section is to explain roles and boundaries, not to turn the README into a warehouse list.
 
 ---
 
 ### 🧠 Requirements, Planning & Product Management
 
-> **Turn big ideas into actionable plans**: requirement insights, problem definition, Sprint planning, task breakdown, and constraint collection. Ensure direction is clear, boundaries are defined, and milestones are verifiable before writing a single line of code.
+**When this gets used**: when the task is still fuzzy and the first job is to decide what problem is actually being solved before anyone starts coding.
 
-`.system`, `aios-pm`, `aios-po`, `aios-sm`, `aios-squad-creator`, `aios-ux-design-expert`, `brainstorming`, `create-plan`, `designing-experiments`, `planning-with-files`, `shared-templates`, `speckit-analyze`, `speckit-checklist`, `speckit-clarify`, `speckit-constitution`, `speckit-plan`, `speckit-specify`, `speckit-tasks`, `speckit-taskstoissues`, `subagent-driven-development`, `think-harder`, `treatment-plans`, `ux-researcher-designer`, `writing-plans`
+**Why similar skills coexist**: they handle different stages of the same path. One clarifies the ask, another writes the spec, another turns that spec into a plan, and another breaks the plan into tasks.
+
+**How you usually meet them**: early in a project, before a large change, or whenever a request is too vague to execute safely.
+
+**Representative entries**: `brainstorming`, `speckit-clarify`, `writing-plans`, `speckit-specify`
 
 ---
 
 ### 🛠️ Software Engineering & Architecture
 
-> **The true engineering foundation**: from scaffolding, cross-file changes, API design to microservice architecture evaluation. Not just code output — also context memory, toolchain orchestration, and multi-phase intelligent Agent coordination.
+**When this gets used**: when the problem is clear enough to design system boundaries, make code changes, or coordinate a multi-step implementation.
 
-`aios-architect`, `aios-dev`, `aios-master`, `architecture-patterns`, `autonomous-builder`, `cancel-ralph`, `coding-tutor`, `context-fundamentals`, `context-hunter`, `cs-foundations`, `deepagent-memory-fold`, `deepagent-toolchain-plan`, `evaluating-code-models`, `get-available-resources`, `hive-mind-advanced`, `local-vco-roles`, `nowait-reasoning-optimizer`, `prompt-lookup`, `ralph-loop`, `skill-creator`, `skill-lookup`, `spec-kit-vibe-compat`, `speckit-implement`, `superclaude-framework-compat`, `theme-factory`, `vibe`, `webthinker-deep-research`
+**Why similar skills coexist**: some focus on architecture, some on implementation, and some on governed execution across several steps or agents. They are adjacent, but they are not doing the same job.
+
+**How you usually meet them**: after planning is done, when a change touches several files, several layers, or several execution phases.
+
+**Representative entries**: `aios-architect`, `architecture-patterns`, `autonomous-builder`, `vibe`
 
 ---
 
 ### 🔧 Debugging, Testing & Quality Assurance
 
-> **Guarding the lifeline of code and systems**: unit tests, root cause analysis, dependency conflict resolution, security vulnerability reviews, and a complete TDD guide — ensuring systems never enter a "breaks after every change" black-box state.
+**When this gets used**: when something is broken, risky, hard to trust, or ready for review.
 
-`aios-qa`, `build-error-resolver`, `code-review`, `code-review-excellence`, `code-reviewer`, `data-quality-checker`, `data-quality-frameworks`, `debugging-strategies`, `deslop`, `detecting-performance-regressions`, `error-resolver`, `evals-context`, `experiment-failure-analysis`, `generating-test-reports`, `ml-data-leakage-guard`, `performance-testing`, `property-based-testing`, `providing-performance-optimization-advice`, `receiving-code-review`, `requesting-code-review`, `reviewing-code`, `security-best-practices`, `security-ownership-map`, `security-reviewer`, `security-threat-model`, `systematic-debugging`, `tdd-guide`, `verification-before-completion`, `verification-quality-assurance`, `windows-hook-debugging`
+**Why similar skills coexist**: debugging, testing, review, and final verification are separate actions. A quick bug-fix entrypoint is not the same thing as a disciplined debugging workflow, and neither replaces review or regression checks.
+
+**How you usually meet them**: after a failure, before a PR, or whenever a change needs evidence instead of guesswork.
+
+**Representative entries**: `systematic-debugging`, `error-resolver`, `verification-before-completion`, `code-review`
 
 ---
 
 ### 📊 Data Analysis & Statistical Modeling
 
-> **Let data tell the truth**: a one-stop data processing engine from data cleaning, missing value handling, and exploratory analysis (EDA) to advanced statistical testing, regression models, and time series forecasting.
+**When this gets used**: when the main task is to understand data, clean it, test assumptions, or explain findings.
 
-`aios-data-engineer`, `anomaly-detector`, `correlation-analyzer`, `dask`, `data-artist`, `data-exploration-visualization`, `data-normalization-tool`, `detecting-data-anomalies`, `excel-analysis`, `exploratory-data-analysis`, `feature-importance-analyzer`, `geopandas`, `hypothesis-testing`, `metric-calculator`, `networkx`, `performing-causal-analysis`, `performing-regression-analysis`, `polars`, `preprocessing-data-with-automated-pipelines`, `regression-analysis-helper`, `running-clustering-algorithms`, `scientific-data-preprocessing`, `splitting-datasets`, `spreadsheet`, `statistical-analysis`, `statistics-math`, `statsmodels`, `usfiscaldata`, `vaex`, `xlsx`
+**Why similar skills coexist**: some are for cleaning and exploration, some for statistical testing, some for visualization, and some for specific data types or pipelines. They support one another, rather than duplicating one another.
+
+**How you usually meet them**: before modeling, during experiment analysis, or anytime the question is "what does this data actually say?"
+
+**Representative entries**: `statistical-analysis`, `performing-regression-analysis`, `detecting-data-anomalies`, `data-exploration-visualization`
 
 ---
 
 ### 🤖 Machine Learning & AI Engineering
 
-> **Full-stack AI model development**: beyond just calling APIs — feature engineering, model training, fine-tuning, interpretability (SHAP), large model evaluation (Evals), and reinforcement learning workflows.
+**When this gets used**: when the task is no longer just data understanding, but model building, evaluation, iteration, and explanation.
 
-`LQF_Machine_Learning_Expert_Guide`, `aeon`, `datamol`, `deepchem`, `embedding-strategies`, `engineering-features-for-machine-learning`, `evaluating-llms-harness`, `evaluating-machine-learning-models`, `explaining-machine-learning-models`, `geniml`, `ml-pipeline-workflow`, `openai-knowledge`, `pufferlib`, `pytorch-lightning`, `scikit-learn`, `scikit-survival`, `senior-computer-vision`, `senior-data-scientist`, `senior-ml-engineer`, `senior-prompt-engineer`, `shap`, `similarity-search-patterns`, `sparse-autoencoder-training`, `stable-baselines3`, `tensorboard`, `timesfm-forecasting`, `torch-geometric`, `torch_geometric`, `torchdrug`, `training-machine-learning-models`, `transformer-lens-interpretability`, `transformers`, `umap-learn`, `unsloth`, `weights-and-biases`
+**Why similar skills coexist**: training, evaluation, explainability, and experiment tracking are different parts of a model workflow. A model-training skill should not be expected to cover data analysis, and an explainability skill should not be expected to replace training infrastructure.
+
+**How you usually meet them**: after data prep is done, when you need to train something, compare results, or understand why a model behaves a certain way.
+
+**Representative entries**: `senior-ml-engineer`, `training-machine-learning-models`, `evaluating-machine-learning-models`, `explaining-machine-learning-models`
 
 ---
 
-### 🧬 Life Sciences & Bioinformatics
+### 🧬 Research, Literature & Life Sciences
 
-> **A formidable interdisciplinary powerhouse**: single-cell sequencing analysis, protein structure folding, drug molecule discovery, genomics alignment — seamlessly integrated with cloud-based biology lab systems.
+**When this gets used**: when the work itself is research-heavy, especially in literature review, scientific support, life sciences, or bioinformatics.
 
-`adaptyv`, `alphafold-database`, `anndata`, `arboreto`, `benchling-integration`, `biopython`, `bioservices`, `cellxgene-census`, `cobrapy`, `deeptools`, `diffdock`, `dnanexus-integration`, `esm`, `etetoolkit`, `flowio`, `gene-database`, `gget`, `ginkgo-cloud-lab`, `gtars`, `histolab`, `imaging-data-commons`, `labarchive-integration`, `lamindb`, `latchbio-integration`, `matchms`, `medchem`, `molfeat`, `neurokit2`, `neuropixels-analysis`, `omero-integration`, `opentrons-integration`, `pathml`, `protocolsio-integration`, `pydeseq2`, `pydicom`, `pyhealth`, `pylabrobot`, `pyopenms`, `pysam`, `pytdc`, `rdkit`, `scanpy`, `scikit-bio`, `scvi-tools`, `tiledbvcf`
+**Why similar skills coexist**: research workflows are naturally multi-step. One skill helps find papers, another structures evidence, another handles scientific analysis, and another focuses on life-science-specific toolchains.
+
+**How you usually meet them**: when the request is about papers, experiments, scientific evidence, single-cell workflows, genomics, or drug-related analysis.
+
+**Representative entries**: `literature-review`, `research-lookup`, `biopython`, `scanpy`
 
 ---
 
 ### 🔬 Scientific Computing & Mathematical Logic
 
-> **Precise derivation and complex system simulation**: symbolic math, Bayesian probabilistic programming, quantum computing simulation, multi-objective optimization, and rigorous propositional logic and mathematical proof assistance.
+**When this gets used**: when the hard part of the task is mathematical reasoning, symbolic work, formal modeling, simulation, or optimization.
 
-`astropy`, `cirq`, `dialectic`, `fluidsim`, `gradient-methods`, `math`, `math-model-selector`, `math-tools`, `mathematical-logic-expert`, `matlab`, `pennylane`, `pymatgen`, `pymc`, `pymc-bayesian-modeling`, `pymoo`, `propositional-logic`, `qiskit`, `qutip`, `rowan`, `simpy`, `sympy`, `xan`
+**Why similar skills coexist**: some focus on symbolic derivation, some on probabilistic models, some on simulation, and some on optimization or formal logic. They may sit near each other, but they solve different kinds of mathematical work.
 
----
+**How you usually meet them**: in research-heavy tasks, quantitative modeling, or workflows where natural-language reasoning is not precise enough.
 
-### 📚 Scientific Literature & Academic Writing
-
-> **The expressway for academic productivity**: precise search across dozens of databases (PubMed, arXiv, etc.), systematic review matrix organization, citation management, and the complete publication pipeline from drafting to peer review.
-
-`bgpt-paper-search`, `biorxiv-database`, `brenda-database`, `chembl-database`, `citation-management`, `clinical-decision-support`, `clinical-reports`, `clinicaltrials-database`, `clinpgx-database`, `clinvar-database`, `comprehensive-research-agent`, `content-research-writer`, `cosmic-database`, `datacommons-client`, `documentation-lookup`, `drugbank-database`, `ena-database`, `ensembl-database`, `fda-database`, `geo-database`, `gwas-database`, `hmdb-database`, `hypothesis-generation`, `kegg-database`, `literature-matrix`, `literature-review`, `manuscript-as-code`, `market-research-reports`, `metabolomics-workbench-database`, `open-notebook`, `openalex-database`, `opentargets-database`, `paper-2-web`, `pdb-database`, `peer-review`, `pubchem-database`, `pubmed-database`, `pyzotero`, `reactome-database`, `research-grants`, `research-lookup`, `scholar-evaluation`, `scholarly-publishing`, `scientific-brainstorming`, `scientific-critical-thinking`, `scientific-reporting`, `scientific-writing`, `string-database`, `submission-checklist`, `uniprot-database`, `uspto-database`, `zinc-database`
+**Representative entries**: `sympy`, `pymc-bayesian-modeling`, `pymoo`, `qiskit`
 
 ---
 
 ### 🎨 Multimedia, Visualization & Documentation
 
-> **Making knowledge and data visible**: interactive chart generation, publication-quality scientific figures, slide creation, audio/video production, and deep read/write parsing of Word, PDF, and other office documents.
+**When this gets used**: when the job is to turn work into something another person can read, present, review, or publish.
 
-`algorithmic-art`, `creating-data-visualizations`, `data-storytelling`, `datavis`, `doc`, `docs-review`, `docs-write`, `document-skills`, `docx`, `docx-comment-reply`, `figma`, `figma-implement-design`, `file-organizer`, `g2-legend-expert`, `generate-image`, `imagegen`, `infographics`, `latex-posters`, `latex-submission-pipeline`, `markdown-mermaid-writing`, `markitdown`, `matplotlib`, `pdf`, `plotly`, `pptx-posters`, `report-generator`, `scientific-schematics`, `scientific-slides`, `scientific-visualization`, `screenshot`, `seaborn`, `slides-as-code`, `smart-file-writer`, `speech`, `structured-content-storage`, `transcribe`, `venue-templates`, `video-studio`, `visualization-best-practices`, `vscode-release-notes-writer`, `writing-docs`
+**Why similar skills coexist**: a chart generator, a documentation writer, a slide tool, and an image tool are all output layers, but they serve different formats and audiences. They belong in the same family because they are delivery surfaces, not because they are interchangeable.
+
+**How you usually meet them**: near the end of a workflow, once results need to become reports, figures, slides, diagrams, or polished documentation.
+
+**Representative entries**: `docs-write`, `plotly`, `scientific-visualization`, `generate-image`
 
 ---
 
 ### 🔌 External Integrations, Automation & Deployment
 
-> **Breaking the limits of the runtime**: seamlessly connect external browsers, design platforms, and cloud services via MCP protocol and Playwright automation — plus CI/CD pipeline support and one-click automated deployment.
+**When this gets used**: when the task depends on browsers, web content, design surfaces, external services, CI, or deployment.
 
-`aios-devops`, `alpha-vantage`, `claude-skills`, `commit-with-reflection`, `denario`, `digital-brain`, `edgartools`, `flashrag-evidence`, `fred-economic-data`, `geomaster`, `gh-address-comments`, `gh-fix-ci`, `hedgefundmonitor`, `hypogenic`, `iso-13485-certification`, `jupyter-notebook`, `knowledge-steward`, `mcp-integration`, `modal`, `modal-labs`, `netlify-deploy`, `openai-docs`, `perplexity-search`, `playwright`, `prowler-docs`, `scrapling`, `sentry`, `skypilot-multi-cloud-orchestration`, `vercel-deploy`
+**Why similar skills coexist**: browser interaction, content extraction, external service adapters, and deployment automation are related, but they solve different surface-level problems. `playwright` and `scrapling`, for example, both touch the web, but one is better for browser behavior and the other for fetching or extracting content efficiently.
+
+**How you usually meet them**: when the work cannot stay inside the model alone and needs to touch the outside world.
+
+**Representative entries**: `playwright`, `scrapling`, `mcp-integration`, `aios-devops`
+
+---
+
+Taken together, these categories are meant to cover different task types, different workflow stages, and different output surfaces. Similar skills usually coexist for predictable reasons: stage differences, domain specialization, host adaptation, or format-specific delivery.
 
 </details>
 

@@ -1,5 +1,12 @@
 # VCO Changelog
 
+## v3.0.3 (2026-04-15)
+
+- Added host-global bootstrap lifecycle support so supported instruction-file hosts can carry an install-safe, idempotent, and uninstall-safe managed `$vibe` / `/vibe` bootstrap block.
+- Tightened specialist decision truth, self-upgrade metadata recovery, installed-runtime payload completeness, and bounded optional install / git timeout behavior across the shipped runtime.
+- Detailed release notes: `docs/releases/v3.0.3.md`.
+
+
 ## v3.0.2 (2026-04-13)
 
 - Release cut by `scripts/governance/release-cut.ps1`.

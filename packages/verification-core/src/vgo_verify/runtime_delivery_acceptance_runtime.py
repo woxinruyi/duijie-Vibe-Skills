@@ -8,11 +8,13 @@ from .runtime_delivery_acceptance_support import (
     _extract_bullets,
     _manual_spot_checks_from_requirement,
     _missing_frozen_items,
+    _normalize_skill_id_list,
     _normalize_truth_state,
     _normalize_string_list,
     _read_text_if_exists,
     _requirement_optional_bullets,
     _resolve_artifact_review_payload,
+    _resolve_specialist_decision_payload,
     _resolve_tdd_evidence_payload,
     _truth_completion_allowed,
     _truth_success,
@@ -38,6 +40,8 @@ def evaluate_delivery_acceptance(repo_root: Path, session_root: Path) -> dict[st
     execution_plan_text = _read_text_if_exists(execution_plan_path)
     execution_manifest = load_json(execution_manifest_path)
     runtime_input_packet = load_json(runtime_input_packet_path) if runtime_input_packet_path.exists() else {}
+    specialist_dispatch = runtime_input_packet.get("specialist_dispatch") or {}
+    specialist_accounting = execution_manifest.get("specialist_accounting") or {}
 
     product_acceptance_criteria = _extract_bullets(requirement_text, "Product Acceptance Criteria")
     manual_spot_checks, manual_section_missing = _manual_spot_checks_from_requirement(requirement_text)
@@ -63,6 +67,7 @@ def evaluate_delivery_acceptance(repo_root: Path, session_root: Path) -> dict[st
         "Research Augmentation Sources",
     )
     artifact_review_payload = _resolve_artifact_review_payload(session_root, execute_receipt)
+    specialist_decision_payload = _resolve_specialist_decision_payload(session_root, execute_receipt)
     tdd_evidence_payload = _resolve_tdd_evidence_payload(session_root, execute_receipt)
 
     governance_truth_state = "passing"
@@ -183,6 +188,201 @@ def evaluate_delivery_acceptance(repo_root: Path, session_root: Path) -> dict[st
     elif execution_status != "completed":
         workflow_truth_state = "failing"
         workflow_truth_notes.append("Workflow did not reach a clean completed state.")
+
+    specialist_disclosure_state = "not_applicable"
+    specialist_disclosure_notes: list[str] = []
+    specialist_user_disclosure = execute_receipt.get("specialist_user_disclosure") or {}
+    approved_dispatch = specialist_accounting.get("approved_dispatch") or specialist_dispatch.get("approved_dispatch") or []
+    approved_dispatch_skill_ids = _normalize_skill_id_list(approved_dispatch)
+    disclosure_routed_skills = specialist_user_disclosure.get("routed_skills") or []
+    disclosure_skill_ids = _normalize_skill_id_list(disclosure_routed_skills)
+    disclosure_missing_entrypoint_skill_ids = _normalize_skill_id_list(
+        [
+            record
+            for record in disclosure_routed_skills
+            if not bool(record.get("entrypoint_requirement_satisfied", bool(record.get("native_skill_entrypoint"))))
+        ]
+    )
+    approved_dispatch_skill_id_set = set(approved_dispatch_skill_ids)
+    disclosure_skill_id_set = set(disclosure_skill_ids)
+    specialist_degraded_skill_ids = _normalize_skill_id_list(
+        specialist_accounting.get("degraded_skill_ids") or specialist_dispatch.get("degraded_skill_ids")
+    )
+    specialist_blocked_skill_ids = _normalize_skill_id_list(
+        specialist_accounting.get("blocked_skill_ids") or specialist_dispatch.get("blocked_skill_ids")
+    )
+    specialist_activity_skill_ids = _normalize_skill_id_list(
+        [
+            *approved_dispatch_skill_ids,
+            *disclosure_skill_ids,
+            *specialist_degraded_skill_ids,
+            *specialist_blocked_skill_ids,
+        ]
+    )
+    effective_specialist_execution_status = str(specialist_accounting.get("effective_execution_status") or "").strip()
+    specialist_disclosure_scope = str(specialist_user_disclosure.get("scope") or "").strip()
+    specialist_disclosure_timing = str(specialist_user_disclosure.get("timing") or "").strip()
+    specialist_disclosure_path_source = str(specialist_user_disclosure.get("path_source") or "").strip()
+
+    if specialist_activity_skill_ids:
+        if approved_dispatch_skill_ids and not specialist_user_disclosure:
+            specialist_disclosure_state = "failing"
+            specialist_disclosure_notes.append(
+                "Approved specialist dispatch was present but no specialist user disclosure was recorded."
+            )
+        elif not approved_dispatch_skill_ids and disclosure_skill_ids:
+            specialist_disclosure_state = "failing"
+            specialist_disclosure_notes.append(
+                "Specialist user disclosure was recorded without any effective approved dispatch."
+            )
+        elif approved_dispatch_skill_ids:
+            if specialist_disclosure_scope != "approved_dispatch_only":
+                specialist_disclosure_state = "failing"
+                specialist_disclosure_notes.append(
+                    "Specialist user disclosure scope did not stay aligned with approved_dispatch_only."
+                )
+            if specialist_disclosure_timing != "before_execution":
+                specialist_disclosure_state = "failing"
+                specialist_disclosure_notes.append(
+                    "Specialist user disclosure timing did not stay aligned with before_execution."
+                )
+            if specialist_disclosure_path_source != "native_skill_entrypoint":
+                specialist_disclosure_state = "failing"
+                specialist_disclosure_notes.append(
+                    "Specialist user disclosure path source did not stay aligned with native_skill_entrypoint."
+                )
+            if disclosure_skill_id_set != approved_dispatch_skill_id_set:
+                specialist_disclosure_state = "failing"
+                specialist_disclosure_notes.append(
+                    "Specialist user disclosure did not match effective approved dispatch."
+                )
+            if disclosure_missing_entrypoint_skill_ids:
+                specialist_disclosure_state = "failing"
+                specialist_disclosure_notes.append(
+                    "Specialist user disclosure omitted required native entrypoint truth for one or more skills."
+                )
+            if specialist_disclosure_state != "failing":
+                if effective_specialist_execution_status in {"explicitly_degraded", "blocked_before_execution"} or specialist_degraded_skill_ids:
+                    specialist_disclosure_state = "degraded"
+                    specialist_disclosure_notes.append(
+                        "Specialist disclosure stayed aligned, but specialist execution remained explicitly degraded."
+                    )
+                else:
+                    specialist_disclosure_state = "passing"
+                    specialist_disclosure_notes.append(
+                        "Specialist disclosure stayed aligned with effective approved dispatch."
+                    )
+
+    specialist_decision_state = "not_applicable"
+    specialist_decision_notes: list[str] = []
+    specialist_decision_evidence = _normalize_string_list(specialist_decision_payload.get("evidence_paths"))
+    specialist_decision_source_path = str(specialist_decision_payload.get("source_path") or "").strip()
+    if specialist_decision_source_path:
+        specialist_decision_evidence = [specialist_decision_source_path, *specialist_decision_evidence]
+    decision_state = str(specialist_decision_payload.get("decision_state") or "").strip()
+    resolution_mode = str(specialist_decision_payload.get("resolution_mode") or "").strip()
+    decision_approved_dispatch_skill_ids = _normalize_skill_id_list(
+        specialist_decision_payload.get("approved_dispatch_skill_ids")
+    )
+    decision_approved_dispatch_skill_id_set = set(decision_approved_dispatch_skill_ids)
+    repo_asset_fallback = specialist_decision_payload.get("repo_asset_fallback") or {}
+    repo_asset_used = bool(repo_asset_fallback.get("used"))
+    repo_asset_paths = _normalize_string_list(repo_asset_fallback.get("asset_paths"))
+    repo_asset_reason = str(repo_asset_fallback.get("reason") or "").strip()
+    repo_asset_legal_basis = str(repo_asset_fallback.get("legal_basis") or "").strip()
+    repo_asset_traceability = _normalize_string_list(repo_asset_fallback.get("traceability_basis"))
+
+    if approved_dispatch_skill_ids:
+        if not specialist_decision_payload:
+            specialist_decision_state = "failing"
+            specialist_decision_notes.append(
+                "Approved specialist dispatch was present but no specialist decision artifact was recorded."
+            )
+        elif decision_state != "approved_dispatch" or resolution_mode != "approved_dispatch":
+            specialist_decision_state = "failing"
+            specialist_decision_notes.append(
+                "Specialist decision did not stay aligned with approved_dispatch."
+            )
+        elif (
+            decision_approved_dispatch_skill_ids
+            and decision_approved_dispatch_skill_id_set != approved_dispatch_skill_id_set
+        ):
+            specialist_decision_state = "failing"
+            specialist_decision_notes.append(
+                "Specialist decision approved dispatch skill ids did not match effective approved dispatch."
+            )
+        else:
+            specialist_decision_state = "passing"
+            specialist_decision_notes.append(
+                "Specialist decision stayed aligned with approved dispatch."
+            )
+    else:
+        if not specialist_decision_payload:
+            specialist_decision_state = "manual_review_required"
+            specialist_decision_notes.append(
+                "No bounded specialist recommendation path was frozen but no explicit specialist resolution was recorded."
+            )
+        elif decision_state == "no_specialist_recommendations":
+            if resolution_mode in {"", "pending_resolution"}:
+                specialist_decision_state = "manual_review_required"
+                specialist_decision_notes.append(
+                    "No specialist recommendation was frozen and the no-match resolution remained pending."
+                )
+            elif resolution_mode == "no_specialist_needed":
+                if repo_asset_used or repo_asset_paths or repo_asset_reason or repo_asset_legal_basis or repo_asset_traceability:
+                    specialist_decision_state = "failing"
+                    specialist_decision_notes.append(
+                        "Specialist decision claimed no_specialist_needed but also recorded repo-asset fallback details."
+                    )
+                else:
+                    specialist_decision_state = "passing"
+                    specialist_decision_notes.append(
+                        "Specialist decision explicitly recorded that no bounded specialist help was needed."
+                    )
+            elif resolution_mode == "repo_asset_fallback":
+                missing_fallback_fields: list[str] = []
+                if not repo_asset_used:
+                    missing_fallback_fields.append("used=true")
+                if not repo_asset_paths:
+                    missing_fallback_fields.append("asset_paths")
+                if not repo_asset_reason:
+                    missing_fallback_fields.append("reason")
+                if not repo_asset_legal_basis:
+                    missing_fallback_fields.append("legal_basis")
+                if not repo_asset_traceability:
+                    missing_fallback_fields.append("traceability_basis")
+                if missing_fallback_fields:
+                    specialist_decision_state = "failing"
+                    specialist_decision_notes.append(
+                        "Repo-asset fallback was declared but did not record all required fields: "
+                        + ", ".join(missing_fallback_fields)
+                        + "."
+                    )
+                else:
+                    specialist_decision_state = "degraded"
+                    specialist_decision_notes.append(
+                        "Repo-asset fallback stayed explicit and traceable when no dedicated specialist was available."
+                    )
+            else:
+                specialist_decision_state = "failing"
+                specialist_decision_notes.append(
+                    "Specialist decision recorded an unsupported no-match resolution mode."
+                )
+        elif decision_state == "local_suggestion_only":
+            specialist_decision_state = "manual_review_required"
+            specialist_decision_notes.append(
+                "Specialist decision remained advisory-only and still requires explicit escalation before closure."
+            )
+        elif decision_state in {"blocked", "degraded"}:
+            specialist_decision_state = "degraded"
+            specialist_decision_notes.append(
+                "Specialist decision stayed explicit, but the bounded specialist path remained non-green."
+            )
+        else:
+            specialist_decision_state = "failing"
+            specialist_decision_notes.append(
+                "Specialist decision artifact did not record a supported decision state."
+            )
 
     artifact_review_state = "passing"
     artifact_review_notes: list[str] = []
@@ -325,6 +525,20 @@ def evaluate_delivery_acceptance(repo_root: Path, session_root: Path) -> dict[st
             "evidence": [str(execution_manifest_path)],
             "notes": " ".join(engineering_truth_notes).strip(),
         },
+        "specialist_disclosure_truth": {
+            "state": _normalize_truth_state(specialist_disclosure_state),
+            "evidence": [
+                str(path)
+                for path in (runtime_input_packet_path, execute_receipt_path, execution_manifest_path)
+                if path.exists()
+            ],
+            "notes": " ".join(specialist_disclosure_notes).strip(),
+        },
+        "specialist_decision_truth": {
+            "state": _normalize_truth_state(specialist_decision_state),
+            "evidence": specialist_decision_evidence,
+            "notes": " ".join(specialist_decision_notes).strip(),
+        },
         "code_task_tdd_evidence_truth": {
             "state": _normalize_truth_state(code_task_tdd_evidence_state),
             "evidence": code_task_tdd_evidence_evidence,
@@ -347,11 +561,8 @@ def evaluate_delivery_acceptance(repo_root: Path, session_root: Path) -> dict[st
         },
     }
 
-    failing_layers = [
-        layer
-        for layer, info in truth_layers.items()
-        if info["state"] in {"failing", "degraded", "partial", "not_run"}
-    ]
+    failing_layers = [layer for layer, info in truth_layers.items() if info["state"] in {"failing", "partial", "not_run"}]
+    degraded_layers = [layer for layer, info in truth_layers.items() if info["state"] == "degraded"]
     manual_layers = [layer for layer, info in truth_layers.items() if info["state"] == "manual_review_required"]
     incomplete_layers = [layer for layer, info in truth_layers.items() if not _truth_success(contract, info["state"])]
 
@@ -360,6 +571,8 @@ def evaluate_delivery_acceptance(repo_root: Path, session_root: Path) -> dict[st
         gate_result = "FAIL"
     elif manual_layers:
         gate_result = "MANUAL_REVIEW_REQUIRED"
+    elif degraded_layers:
+        gate_result = "PASS_DEGRADED"
 
     readiness_state = _derive_readiness_state(gate_result, manual_spot_checks)
     forbidden_hits: list[dict[str, str]] = []
@@ -402,6 +615,16 @@ def evaluate_delivery_acceptance(repo_root: Path, session_root: Path) -> dict[st
         residual_risks.append("Cleanup degraded, so closure is not fully authoritative.")
     if execution_status == "completed_local_scope":
         residual_risks.append("This run is child-scoped and cannot justify root-level completion wording.")
+    if specialist_disclosure_state == "failing":
+        residual_risks.append("Specialist disclosure truth is internally inconsistent or missing.")
+    if specialist_disclosure_state == "degraded":
+        residual_risks.append("Specialist disclosure is traceable, but the specialist execution path remained degraded.")
+    if specialist_decision_state == "manual_review_required":
+        residual_risks.append("Specialist no-match resolution still requires explicit governance review.")
+    if specialist_decision_state == "failing":
+        residual_risks.append("Specialist decision truth is missing required fallback or dispatch detail.")
+    if specialist_decision_state == "degraded":
+        residual_risks.append("Specialist decision recorded a traceable but non-green specialist fallback path.")
 
     summary = {
         "gate_result": gate_result,
@@ -410,6 +633,7 @@ def evaluate_delivery_acceptance(repo_root: Path, session_root: Path) -> dict[st
         "readiness_state": readiness_state,
         "manual_review_layer_count": len(manual_layers),
         "failing_layer_count": len(failing_layers),
+        "degraded_layer_count": len(degraded_layers),
         "forbidden_completion_hit_count": len(forbidden_hits),
         "incomplete_layers": incomplete_layers,
         "manual_spot_check_count": len(manual_spot_checks),
@@ -488,6 +712,11 @@ def evaluate_delivery_acceptance(repo_root: Path, session_root: Path) -> dict[st
             "code_task_tdd_evidence_state": _normalize_truth_state(code_task_tdd_evidence_state),
             "artifact_review_source_path": artifact_review_source_path,
             "artifact_review_state": _normalize_truth_state(artifact_review_state),
+            "specialist_decision_source_path": specialist_decision_source_path,
+            "approved_dispatch_skill_ids": approved_dispatch_skill_ids,
+            "disclosed_specialist_skill_ids": disclosure_skill_ids,
+            "specialist_effective_execution_status": effective_specialist_execution_status,
+            "specialist_disclosure_state": _normalize_truth_state(specialist_disclosure_state),
         },
         "forbidden_completion_hits": forbidden_hits,
         "manual_spot_checks": manual_spot_checks,

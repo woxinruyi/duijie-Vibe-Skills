@@ -63,6 +63,29 @@ def _normalize_string_list(value: Any) -> list[str]:
     return [str(item).strip() for item in items if str(item).strip()]
 
 
+def _normalize_skill_id_list(value: Any) -> list[str]:
+    if isinstance(value, list):
+        items = value
+    elif value is None:
+        items = []
+    else:
+        items = [value]
+
+    skill_ids: list[str] = []
+    seen: set[str] = set()
+    for item in items:
+        if isinstance(item, dict):
+            candidate = item.get("skill_id") or item.get("id") or item.get("name")
+        else:
+            candidate = item
+        skill_id = str(candidate or "").strip()
+        if not skill_id or skill_id in seen:
+            continue
+        seen.add(skill_id)
+        skill_ids.append(skill_id)
+    return skill_ids
+
+
 def _normalize_match_key(value: str) -> str:
     return " ".join(str(value).split()).strip().lower()
 
@@ -126,6 +149,17 @@ def _resolve_tdd_evidence_payload(session_root: Path, execute_receipt: dict[str,
     )
 
 
+def _resolve_specialist_decision_payload(session_root: Path, execute_receipt: dict[str, Any]) -> dict[str, Any]:
+    return _resolve_optional_payload(
+        session_root,
+        execute_receipt,
+        inline_key="specialist_decision",
+        explicit_path_key="specialist_decision_path",
+        sidecar_filename="specialist-decision.json",
+        inline_presence_keys=("decision_state", "resolution_mode", "notes"),
+    )
+
+
 def _resolve_optional_payload(
     session_root: Path,
     execute_receipt: dict[str, Any],
@@ -179,6 +213,8 @@ def _resolve_optional_payload(
 def _derive_readiness_state(gate_result: str, manual_spot_checks: list[str]) -> str:
     if gate_result == "PASS":
         return "fully_ready"
+    if gate_result == "PASS_DEGRADED":
+        return "degraded_but_traceable"
     if gate_result == "MANUAL_REVIEW_REQUIRED" or manual_spot_checks:
         return "manual_actions_pending"
     return "verification_failed"

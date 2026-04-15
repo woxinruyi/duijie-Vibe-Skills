@@ -1200,6 +1200,18 @@ $effectiveSpecialistExecutionStatus = if (@($liveSpecialistUnits).Count -gt 0 -a
     'none'
 }
 $specialistDispatchUnitCount = @($approvedDispatch).Count
+$specialistDecisionOverride = Get-VibeOptionalSpecialistDecisionOverride -SessionRoot $sessionRoot
+$specialistDecision = New-VibeSpecialistDecisionProjection `
+    -RuntimeInputPacket $runtimeInputPacket `
+    -ApprovedDispatch @($approvedDispatch) `
+    -LocalSuggestions @($localSuggestions) `
+    -BlockedDispatch @($blockedSpecialistUnits) `
+    -DegradedDispatch @($degradedSpecialistUnits) `
+    -MatchedSkillIds $(if ($runtimeInputPacket -and $runtimeInputPacket.PSObject.Properties.Name -contains 'specialist_dispatch' -and $runtimeInputPacket.specialist_dispatch -and $runtimeInputPacket.specialist_dispatch.PSObject.Properties.Name -contains 'matched_skill_ids' -and $null -ne $runtimeInputPacket.specialist_dispatch.matched_skill_ids) { @($runtimeInputPacket.specialist_dispatch.matched_skill_ids) } else { @() }) `
+    -SurfacedSkillIds $(if ($runtimeInputPacket -and $runtimeInputPacket.PSObject.Properties.Name -contains 'specialist_dispatch' -and $runtimeInputPacket.specialist_dispatch -and $runtimeInputPacket.specialist_dispatch.PSObject.Properties.Name -contains 'surfaced_skill_ids' -and $null -ne $runtimeInputPacket.specialist_dispatch.surfaced_skill_ids) { @($runtimeInputPacket.specialist_dispatch.surfaced_skill_ids) } else { @() }) `
+    -RecommendationCount @($specialistRecommendations).Count `
+    -OverridePayload $(if ($specialistDecisionOverride) { $specialistDecisionOverride.payload } else { $null }) `
+    -OverrideSourcePath $(if ($specialistDecisionOverride) { [string]$specialistDecisionOverride.path } else { '' })
 $runtimePacketHostAdapterIdentity = Get-VibeRuntimePacketHostAdapterAlignment -RuntimeInputPacket $runtimeInputPacket
 $routeRuntimeAlignment = New-VibeRouteRuntimeAlignmentProjection -RuntimeInputPacket $runtimeInputPacket -DefaultRuntimeSkill 'vibe'
 $hierarchyProjection = New-VibeHierarchyProjection -HierarchyState $hierarchyState -IncludeGovernanceScope
@@ -1324,6 +1336,7 @@ $executionManifest = [pscustomobject]@{
         escalation_required = [bool]$escalationRequired
         escalation_request_path = $escalationPath
     }
+    specialist_decision = $specialistDecision
     specialist_user_disclosure = $specialistUserDisclosure
     dispatch_integrity = $dispatchIntegrity
     status = if ([string]$hierarchyState.governance_scope -eq 'child' -and $baseStatus -eq 'completed') { 'completed_local_scope' } else { $baseStatus }
@@ -1453,6 +1466,7 @@ $receipt = [pscustomobject]@{
     specialist_skills = @($specialistSkills)
     auto_approved_specialist_unit_count = @($autoApprovedDispatch).Count
     local_specialist_suggestion_count = @($localSuggestions).Count
+    specialist_decision = $specialistDecision
     specialist_user_disclosure = $specialistUserDisclosure
     dispatch_integrity_proof_passed = [bool]$dispatchIntegrity.proof_passed
     dispatch_integrity = $dispatchIntegrity

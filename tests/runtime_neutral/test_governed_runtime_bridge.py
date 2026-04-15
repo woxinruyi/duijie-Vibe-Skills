@@ -274,6 +274,7 @@ class GovernedRuntimeBridgeTests(unittest.TestCase):
                 self.assertIn("## Acceptance Criteria", requirement_doc)
                 self.assertIn("## Assumptions", requirement_doc)
                 self.assertIn("## Runtime Input Truth", requirement_doc)
+                self.assertIn("## Specialist Decision", requirement_doc)
                 self.assertIn("## Specialist Recommendations", requirement_doc)
                 self.assertIn("## Artifact Review Requirements", requirement_doc)
                 self.assertIn("## Code Task TDD Evidence Requirements", requirement_doc)
@@ -290,6 +291,7 @@ class GovernedRuntimeBridgeTests(unittest.TestCase):
             self.assertEqual("requirements", requirement_doc_path.parent.name)
             self.assertEqual("plans", execution_plan_path.parent.name)
             execution_plan = execution_plan_path.read_text(encoding="utf-8")
+            self.assertIn("## Specialist Decision Plan", execution_plan)
             self.assertIn("## Specialist Consultation", execution_plan)
             self.assertIn("## Unified Specialist Lifecycle Disclosure", execution_plan)
             self.assertIn("## Code Task TDD Evidence Plan", execution_plan)
@@ -314,6 +316,7 @@ class GovernedRuntimeBridgeTests(unittest.TestCase):
             self.assertEqual("vibe", runtime_input_packet["route_snapshot"]["selected_skill"])
             self.assertFalse(runtime_input_packet["divergence_shadow"]["skill_mismatch"])
             self.assertGreaterEqual(len(runtime_input_packet["specialist_recommendations"]), 1)
+            self.assertIn("specialist_decision", runtime_input_packet)
             self.assertIn(
                 "systematic-debugging",
                 [item["skill_id"] for item in runtime_input_packet["specialist_recommendations"]],
@@ -325,6 +328,7 @@ class GovernedRuntimeBridgeTests(unittest.TestCase):
             self.assertGreaterEqual(execute_receipt["specialist_recommendation_count"], 1)
             self.assertGreaterEqual(execute_receipt["specialist_dispatch_unit_count"], 1)
             self.assertIn("systematic-debugging", execute_receipt["specialist_skills"])
+            self.assertIn("specialist_decision", execute_receipt)
             self.assertEqual(execute_receipt["executed_unit_count"], execution_manifest["executed_unit_count"])
             self.assertEqual("completed", execution_manifest["status"])
             self.assertGreaterEqual(execution_manifest["successful_unit_count"], 2)
@@ -338,6 +342,8 @@ class GovernedRuntimeBridgeTests(unittest.TestCase):
             self.assertGreaterEqual(execution_manifest["specialist_accounting"]["dispatch_unit_count"], 1)
             self.assertIn("systematic-debugging", execution_manifest["specialist_accounting"]["specialist_skills"])
             self.assertGreaterEqual(execution_manifest["plan_shadow"]["specialist_dispatch_unit_count"], 1)
+            self.assertIn("specialist_decision", execution_manifest)
+            self.assertIn("specialist_decision", summary)
 
             specialist_disclosure = execution_manifest["specialist_user_disclosure"]
             self.assertEqual("approved_dispatch_only", specialist_disclosure["scope"])
@@ -354,6 +360,19 @@ class GovernedRuntimeBridgeTests(unittest.TestCase):
             self.assertIn(routed_entry["native_skill_entrypoint"], specialist_disclosure["rendered_text"])
             self.assertEqual(specialist_disclosure, execute_receipt["specialist_user_disclosure"])
             self.assertEqual(specialist_disclosure, summary["specialist_user_disclosure"])
+            specialist_decision = execution_manifest["specialist_decision"]
+            self.assertEqual("approved_dispatch", specialist_decision["decision_state"])
+            self.assertEqual("approved_dispatch", specialist_decision["resolution_mode"])
+            self.assertEqual(
+                runtime_input_packet["specialist_dispatch"]["surfaced_skill_ids"],
+                specialist_decision["surfaced_skill_ids"],
+            )
+            self.assertIn("systematic-debugging", specialist_decision["surfaced_skill_ids"])
+            self.assertEqual(
+                specialist_decision["approved_dispatch_skill_ids"],
+                execute_receipt["specialist_decision"]["approved_dispatch_skill_ids"],
+            )
+            self.assertEqual(specialist_decision, summary["specialist_decision"])
 
             consultation_summary = summary["specialist_consultation"]
             self.assertTrue(bool(consultation_summary["enabled"]))

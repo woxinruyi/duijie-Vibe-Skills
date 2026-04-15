@@ -1,9 +1,11 @@
 {
-  "contract_id": "vibe-project-delivery-acceptance-v3",
-  "version": 3,
+  "contract_id": "vibe-project-delivery-acceptance-v5",
+  "version": 5,
   "truth_layers": [
     "governance_truth",
     "engineering_verification_truth",
+    "specialist_disclosure_truth",
+    "specialist_decision_truth",
     "code_task_tdd_evidence_truth",
     "workflow_completion_truth",
     "artifact_review_truth",
@@ -60,6 +62,8 @@
     "must_report_fields": [
       "governance_truth",
       "engineering_verification_truth",
+      "specialist_disclosure_truth",
+      "specialist_decision_truth",
       "code_task_tdd_evidence_truth",
       "workflow_completion_truth",
       "artifact_review_truth",

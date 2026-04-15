@@ -427,6 +427,36 @@ if ($runtimeInputPacket) {
         "- Confirm required: $([bool]$runtimeInputPacket.route_snapshot.confirm_required)"
     )
 
+    $specialistDecision = if (
+        $runtimeInputPacket.PSObject.Properties.Name -contains 'specialist_decision' -and
+        $null -ne $runtimeInputPacket.specialist_decision
+    ) {
+        $runtimeInputPacket.specialist_decision
+    } else {
+        $null
+    }
+    if ($specialistDecision) {
+        $lines += @(
+            '',
+            '## Specialist Decision',
+            '- Governed `vibe` must explicitly record whether specialist execution is happening, stayed advisory, or remained unresolved before closeout.',
+            ('- Decision state: {0}' -f [string]$specialistDecision.decision_state),
+            ('- Resolution mode: {0}' -f [string]$specialistDecision.resolution_mode),
+            ('- Notes: {0}' -f [string]$specialistDecision.notes)
+        )
+        if ([string]$specialistDecision.resolution_mode -eq 'repo_asset_fallback') {
+            $lines += @(
+                ('- Repo-asset fallback used: {0}' -f [bool]$specialistDecision.repo_asset_fallback.used),
+                ('- Repo-asset fallback assets: {0}' -f [string]::Join(', ', @($specialistDecision.repo_asset_fallback.asset_paths))),
+                ('- Repo-asset fallback reason: {0}' -f [string]$specialistDecision.repo_asset_fallback.reason),
+                ('- Repo-asset fallback legal basis: {0}' -f [string]$specialistDecision.repo_asset_fallback.legal_basis),
+                ('- Repo-asset fallback traceability basis: {0}' -f [string]::Join(', ', @($specialistDecision.repo_asset_fallback.traceability_basis)))
+            )
+        } elseif ([string]$specialistDecision.resolution_mode -eq 'pending_resolution') {
+            $lines += '- If execution later relies on repo-local assets instead of a dedicated specialist skill, phase execute must record `specialist-decision.json` with the asset paths, fallback reason, legal basis, and traceability basis before closure.'
+        }
+    }
+
     $specialistRecommendations = @($runtimeInputPacket.specialist_recommendations)
     if ($specialistRecommendations.Count -gt 0) {
         $lines += @(

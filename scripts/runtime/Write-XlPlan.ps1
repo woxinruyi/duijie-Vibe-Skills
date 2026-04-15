@@ -74,6 +74,15 @@ $runtimeInputPacket = if (-not [string]::IsNullOrWhiteSpace($RuntimeInputPacketP
 } else {
     $null
 }
+$specialistDecision = if (
+    $runtimeInputPacket -and
+    $runtimeInputPacket.PSObject.Properties.Name -contains 'specialist_decision' -and
+    $null -ne $runtimeInputPacket.specialist_decision
+) {
+    $runtimeInputPacket.specialist_decision
+} else {
+    $null
+}
 $planMemoryContext = if (-not [string]::IsNullOrWhiteSpace($PlanMemoryContextPath) -and (Test-Path -LiteralPath $PlanMemoryContextPath)) {
     Get-Content -LiteralPath $PlanMemoryContextPath -Raw -Encoding UTF8 | ConvertFrom-Json
 } else {
@@ -245,6 +254,21 @@ foreach ($topologyWave in @($executionTopology.waves)) {
     $lines += ('- Wave `{0}` has {1} executable step(s).' -f [string]$topologyWave.wave_id, @($topologyWave.steps).Count)
     foreach ($step in @($topologyWave.steps)) {
         $lines += ('  Step `{0}` -> mode `{1}`, units `{2}`.' -f [string]$step.step_id, [string]$step.execution_mode, @($step.units).Count)
+    }
+}
+if ($specialistDecision) {
+    $lines += @(
+        '',
+        '## Specialist Decision Plan',
+        '- The governed runtime must keep one explicit specialist decision surface from freeze through delivery acceptance.',
+        ('- Frozen decision state: {0}' -f [string]$specialistDecision.decision_state),
+        ('- Frozen resolution mode: {0}' -f [string]$specialistDecision.resolution_mode),
+        ('- Frozen decision notes: {0}' -f [string]$specialistDecision.notes)
+    )
+    if ([string]$specialistDecision.resolution_mode -eq 'pending_resolution') {
+        $lines += '- If no dedicated specialist is available but execution relies on repo-local assets instead, write `specialist-decision.json` in the session root with asset paths, fallback reason, legal basis, and traceability basis before closeout.'
+    } elseif ([string]$specialistDecision.resolution_mode -eq 'repo_asset_fallback') {
+        $lines += ('- Repo-asset fallback assets: {0}' -f [string]::Join(', ', @($specialistDecision.repo_asset_fallback.asset_paths)))
     }
 }
 if (@($approvedDispatch).Count -gt 0 -or @($localSuggestions).Count -gt 0) {

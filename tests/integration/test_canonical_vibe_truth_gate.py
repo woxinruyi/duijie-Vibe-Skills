@@ -193,6 +193,23 @@ def test_truth_gate_rejects_missing_runtime_packet_proof_fields(tmp_path: Path) 
     assert "divergence_shadow" in combined
 
 
+def test_truth_gate_reports_missing_route_snapshot_without_unbound_selected_skill_crash(tmp_path: Path) -> None:
+    session_root = tmp_path / "session"
+    _write_valid_canonical_entry_artifacts(session_root)
+    runtime_packet_path = session_root / "runtime-input-packet.json"
+    runtime_packet = json.loads(runtime_packet_path.read_text(encoding="utf-8"))
+    runtime_packet.pop("route_snapshot")
+    _write_json(runtime_packet_path, runtime_packet)
+
+    result = _run_truth_gate(session_root)
+
+    combined = result.stdout + result.stderr
+    assert result.returncode != 0
+    assert "route_snapshot" in combined
+    assert "cannot be retrieved because it has not been set" not in combined
+    assert "selectedSkill" not in combined
+
+
 def test_truth_gate_accepts_verified_canonical_entry_session(tmp_path: Path) -> None:
     session_root = tmp_path / "session"
     _write_valid_canonical_entry_artifacts(session_root)

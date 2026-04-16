@@ -31,6 +31,12 @@ def _write_valid_truth_artifacts(
     router_selected_skill: str = "systematic-debugging",
     requested_stage_stop: str = "phase_cleanup",
     requested_grade_floor: str | None = None,
+    canonical_router_host_id: str | None = None,
+    governance_runtime_selected_skill: str = "vibe",
+    divergence_router_selected_skill: str | None = None,
+    divergence_runtime_selected_skill: str = "vibe",
+    stage_lineage_last_stage_name: str | None = None,
+    stage_lineage_stages: list[dict[str, str]] | None = None,
 ) -> None:
     _write_json(
         session_root / "runtime-input-packet.json",
@@ -40,7 +46,7 @@ def _write_valid_truth_artifacts(
             "requested_stage_stop": requested_stage_stop,
             "requested_grade_floor": requested_grade_floor,
             "canonical_router": {
-                "host_id": host_id,
+                "host_id": host_id if canonical_router_host_id is None else canonical_router_host_id,
                 "requested_skill": entry_intent_id,
             },
             "route_snapshot": {
@@ -57,18 +63,20 @@ def _write_valid_truth_artifacts(
                 "local_specialist_suggestions": [],
             },
             "divergence_shadow": {
-                "router_selected_skill": router_selected_skill,
-                "runtime_selected_skill": "vibe",
+                "router_selected_skill": (
+                    router_selected_skill if divergence_router_selected_skill is None else divergence_router_selected_skill
+                ),
+                "runtime_selected_skill": divergence_runtime_selected_skill,
                 "skill_mismatch": router_selected_skill != "vibe",
             },
         },
     )
-    _write_json(session_root / "governance-capsule.json", {"runtime_selected_skill": "vibe"})
+    _write_json(session_root / "governance-capsule.json", {"runtime_selected_skill": governance_runtime_selected_skill})
     _write_json(
         session_root / "stage-lineage.json",
         {
-            "last_stage_name": requested_stage_stop,
-            "stages": [{"stage_name": requested_stage_stop}],
+            "last_stage_name": requested_stage_stop if stage_lineage_last_stage_name is None else stage_lineage_last_stage_name,
+            "stages": [{"stage_name": requested_stage_stop}] if stage_lineage_stages is None else stage_lineage_stages,
         },
     )
 
@@ -421,6 +429,185 @@ def test_canonical_entry_rejects_when_runtime_packet_drops_requested_grade_floor
             prompt="x",
             requested_stage_stop="xl_plan",
             requested_grade_floor="XL",
+            artifact_root=tmp_path,
+        )
+
+
+def test_canonical_entry_rejects_empty_canonical_router_host_id(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    run_id = "pytest-canonical-entry-empty-router-host"
+    session_root = tmp_path / "outputs" / "runtime" / "vibe-sessions" / run_id
+
+    monkeypatch.setattr(
+        canonical_entry,
+        "resolve_canonical_vibe_contract",
+        lambda repo_root, host_id: {"fallback_policy": "blocked", "allow_skill_doc_fallback": False},
+    )
+
+    def fake_invoke_runtime(**kwargs: object) -> dict[str, object]:
+        _write_valid_truth_artifacts(session_root, canonical_router_host_id="")
+        return {
+            "run_id": run_id,
+            "session_root": str(session_root),
+            "summary_path": str(session_root / "runtime-summary.json"),
+            "summary": {"run_id": run_id},
+        }
+
+    monkeypatch.setattr(canonical_entry, "invoke_vibe_runtime_entrypoint", fake_invoke_runtime)
+
+    with pytest.raises(RuntimeError, match="canonical_router host_id"):
+        canonical_entry.launch_canonical_vibe(
+            repo_root=tmp_path,
+            host_id="codex",
+            entry_id="vibe",
+            prompt="x",
+            requested_stage_stop="phase_cleanup",
+            artifact_root=tmp_path,
+        )
+
+
+def test_canonical_entry_rejects_empty_governance_capsule_runtime_authority(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    run_id = "pytest-canonical-entry-empty-governance-runtime"
+    session_root = tmp_path / "outputs" / "runtime" / "vibe-sessions" / run_id
+
+    monkeypatch.setattr(
+        canonical_entry,
+        "resolve_canonical_vibe_contract",
+        lambda repo_root, host_id: {"fallback_policy": "blocked", "allow_skill_doc_fallback": False},
+    )
+
+    def fake_invoke_runtime(**kwargs: object) -> dict[str, object]:
+        _write_valid_truth_artifacts(session_root, governance_runtime_selected_skill="")
+        return {
+            "run_id": run_id,
+            "session_root": str(session_root),
+            "summary_path": str(session_root / "runtime-summary.json"),
+            "summary": {"run_id": run_id},
+        }
+
+    monkeypatch.setattr(canonical_entry, "invoke_vibe_runtime_entrypoint", fake_invoke_runtime)
+
+    with pytest.raises(RuntimeError, match="governance capsule must keep vibe"):
+        canonical_entry.launch_canonical_vibe(
+            repo_root=tmp_path,
+            host_id="codex",
+            entry_id="vibe",
+            prompt="x",
+            requested_stage_stop="phase_cleanup",
+            artifact_root=tmp_path,
+        )
+
+
+def test_canonical_entry_rejects_empty_divergence_runtime_authority(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    run_id = "pytest-canonical-entry-empty-divergence-runtime"
+    session_root = tmp_path / "outputs" / "runtime" / "vibe-sessions" / run_id
+
+    monkeypatch.setattr(
+        canonical_entry,
+        "resolve_canonical_vibe_contract",
+        lambda repo_root, host_id: {"fallback_policy": "blocked", "allow_skill_doc_fallback": False},
+    )
+
+    def fake_invoke_runtime(**kwargs: object) -> dict[str, object]:
+        _write_valid_truth_artifacts(session_root, divergence_runtime_selected_skill="")
+        return {
+            "run_id": run_id,
+            "session_root": str(session_root),
+            "summary_path": str(session_root / "runtime-summary.json"),
+            "summary": {"run_id": run_id},
+        }
+
+    monkeypatch.setattr(canonical_entry, "invoke_vibe_runtime_entrypoint", fake_invoke_runtime)
+
+    with pytest.raises(RuntimeError, match="divergence_shadow must keep vibe"):
+        canonical_entry.launch_canonical_vibe(
+            repo_root=tmp_path,
+            host_id="codex",
+            entry_id="vibe",
+            prompt="x",
+            requested_stage_stop="phase_cleanup",
+            artifact_root=tmp_path,
+        )
+
+
+def test_canonical_entry_rejects_empty_divergence_router_skill(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    run_id = "pytest-canonical-entry-empty-divergence-router"
+    session_root = tmp_path / "outputs" / "runtime" / "vibe-sessions" / run_id
+
+    monkeypatch.setattr(
+        canonical_entry,
+        "resolve_canonical_vibe_contract",
+        lambda repo_root, host_id: {"fallback_policy": "blocked", "allow_skill_doc_fallback": False},
+    )
+
+    def fake_invoke_runtime(**kwargs: object) -> dict[str, object]:
+        _write_valid_truth_artifacts(session_root, divergence_router_selected_skill="")
+        return {
+            "run_id": run_id,
+            "session_root": str(session_root),
+            "summary_path": str(session_root / "runtime-summary.json"),
+            "summary": {"run_id": run_id},
+        }
+
+    monkeypatch.setattr(canonical_entry, "invoke_vibe_runtime_entrypoint", fake_invoke_runtime)
+
+    with pytest.raises(RuntimeError, match="divergence_shadow router_selected_skill"):
+        canonical_entry.launch_canonical_vibe(
+            repo_root=tmp_path,
+            host_id="codex",
+            entry_id="vibe",
+            prompt="x",
+            requested_stage_stop="phase_cleanup",
+            artifact_root=tmp_path,
+        )
+
+
+def test_canonical_entry_rejects_stage_lineage_without_terminal_stage(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    run_id = "pytest-canonical-entry-missing-terminal-stage"
+    session_root = tmp_path / "outputs" / "runtime" / "vibe-sessions" / run_id
+
+    monkeypatch.setattr(
+        canonical_entry,
+        "resolve_canonical_vibe_contract",
+        lambda repo_root, host_id: {"fallback_policy": "blocked", "allow_skill_doc_fallback": False},
+    )
+
+    def fake_invoke_runtime(**kwargs: object) -> dict[str, object]:
+        _write_valid_truth_artifacts(
+            session_root,
+            stage_lineage_last_stage_name="",
+            stage_lineage_stages=[],
+        )
+        return {
+            "run_id": run_id,
+            "session_root": str(session_root),
+            "summary_path": str(session_root / "runtime-summary.json"),
+            "summary": {"run_id": run_id},
+        }
+
+    monkeypatch.setattr(canonical_entry, "invoke_vibe_runtime_entrypoint", fake_invoke_runtime)
+
+    with pytest.raises(RuntimeError, match="stage-lineage missing terminal stage"):
+        canonical_entry.launch_canonical_vibe(
+            repo_root=tmp_path,
+            host_id="codex",
+            entry_id="vibe",
+            prompt="x",
+            requested_stage_stop="phase_cleanup",
             artifact_root=tmp_path,
         )
 

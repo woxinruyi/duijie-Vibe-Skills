@@ -232,7 +232,9 @@ def assert_minimum_truth_consistency(
     if not isinstance(canonical_router, dict):
         raise RuntimeError("canonical truth packet missing canonical_router object")
     router_host_id = str(canonical_router.get("host_id") or "").strip()
-    if router_host_id and router_host_id != receipt.host_id:
+    if not router_host_id:
+        raise RuntimeError("canonical truth packet missing canonical_router host_id")
+    if router_host_id != receipt.host_id:
         raise RuntimeError("host_id mismatch between host launch receipt and canonical_router")
     router_requested_skill = str(canonical_router.get("requested_skill") or "").strip()
     if router_requested_skill and router_requested_skill != requested_entry_id:
@@ -258,22 +260,31 @@ def assert_minimum_truth_consistency(
 
     governance_capsule = _load_json_dict(Path(governance_capsule_path), label="governance-capsule")
     runtime_selected_skill = str(governance_capsule.get("runtime_selected_skill") or "").strip()
-    if runtime_selected_skill and runtime_selected_skill != CANONICAL_RUNTIME_ENTRY_ID:
-        raise RuntimeError("runtime authority mismatch: runtime_selected_skill must be vibe")
+    if runtime_selected_skill != CANONICAL_RUNTIME_ENTRY_ID:
+        raise RuntimeError("governance capsule must keep vibe as runtime authority")
 
     divergence_shadow = runtime_packet.get("divergence_shadow")
     if not isinstance(divergence_shadow, dict):
         raise RuntimeError("canonical truth packet missing divergence_shadow object")
     divergence_runtime_skill = str(divergence_shadow.get("runtime_selected_skill") or "").strip()
-    if divergence_runtime_skill and divergence_runtime_skill != CANONICAL_RUNTIME_ENTRY_ID:
-        raise RuntimeError("runtime authority mismatch in divergence_shadow")
+    if divergence_runtime_skill != CANONICAL_RUNTIME_ENTRY_ID:
+        raise RuntimeError("divergence_shadow must keep vibe as runtime authority")
     divergence_router_skill = str(divergence_shadow.get("router_selected_skill") or "").strip()
-    if divergence_router_skill and divergence_router_skill != selected_skill:
+    if not divergence_router_skill:
+        raise RuntimeError("canonical truth packet missing divergence_shadow router_selected_skill")
+    if divergence_router_skill != selected_skill:
         raise RuntimeError("route_snapshot selected_skill mismatch with divergence_shadow")
 
     stage_lineage = _load_json_dict(Path(stage_lineage_path), label="stage-lineage")
+    stage_entries = stage_lineage.get("stages")
+    if not (isinstance(stage_entries, list) and stage_entries):
+        stage_entries = stage_lineage.get("entries")
+    if not (isinstance(stage_entries, list) and stage_entries):
+        raise RuntimeError("stage-lineage missing terminal stage")
     terminal_stage = _extract_terminal_stage(stage_lineage)
-    if receipt.requested_stage_stop and terminal_stage and terminal_stage != receipt.requested_stage_stop:
+    if not terminal_stage:
+        raise RuntimeError("stage-lineage missing terminal stage")
+    if receipt.requested_stage_stop and terminal_stage != receipt.requested_stage_stop:
         raise RuntimeError("bounded stop mismatch between host launch receipt and stage-lineage")
 
 

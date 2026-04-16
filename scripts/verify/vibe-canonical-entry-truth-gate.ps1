@@ -129,6 +129,7 @@ if ($hasReceipt -and $hasRuntimePacket -and $hasGovernanceCapsule -and $hasStage
         Add-Assertion -Assertions $assertions -Pass ([string]$entryIntentId -eq [string]$canonicalRouterRequestedSkill) -Message 'runtime packet entry_intent_id matches canonical_router requested skill'
     }
 
+    $selectedSkill = ''
     if (Test-ObjectHasProperty -InputObject $runtimePacket -PropertyName 'route_snapshot') {
         $routeSnapshot = $runtimePacket.route_snapshot
         $selectedSkill = if (Test-ObjectHasProperty -InputObject $routeSnapshot -PropertyName 'selected_skill') { [string]$routeSnapshot.selected_skill } else { '' }

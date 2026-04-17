@@ -1067,7 +1067,10 @@ function Invoke-VibeSpecialistConsultationWindow {
             $consultedUnits.Add($entry) | Out-Null
         } elseif ([string]$outcome.category -eq 'routed') {
             $routedUnits.Add($entry) | Out-Null
+        } elseif ([string]$outcome.category -eq 'degraded') {
+            $degraded.Add($entry) | Out-Null
         } else {
+            Write-Warning ("Unexpected specialist consultation outcome category '{0}' for window '{1}' skill '{2}'; treating as degraded." -f [string]$outcome.category, [string]$WindowId, [string]$consultation.skill_id)
             $degraded.Add($entry) | Out-Null
         }
     }

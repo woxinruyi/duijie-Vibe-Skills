@@ -157,6 +157,14 @@ def extract_expression(pattern: str) -> str:
     return match.group(1).strip()
 
 
+def extract_block(pattern: str) -> str:
+    content = PLAN_EXECUTE_SCRIPT.read_text(encoding="utf-8")
+    match = re.search(pattern, content, re.MULTILINE | re.DOTALL)
+    if not match:
+        raise AssertionError(f"Unable to extract block with pattern: {pattern}")
+    return match.group(0).strip()
+
+
 class SkillPromotionMetricsTests(unittest.TestCase):
     def test_metrics_capture_match_surface_dispatch_and_execute(self) -> None:
         with tempfile.TemporaryDirectory() as tempdir:
@@ -165,6 +173,8 @@ class SkillPromotionMetricsTests(unittest.TestCase):
                 ML_PROMPT,
                 temp_path,
                 extra_env={
+                    "VGO_NATIVE_SPECIALIST_EXECUTION_MODE": "",
+                    "VGO_SPECIALIST_CONSULTATION_MODE": "",
                     "VGO_ENABLE_NATIVE_SPECIALIST_EXECUTION": "1",
                     "VGO_DISABLE_NATIVE_SPECIALIST_EXECUTION": "0",
                 },
@@ -179,6 +189,48 @@ class SkillPromotionMetricsTests(unittest.TestCase):
             self.assertEqual(0, int(funnel["executed"]))
             self.assertGreaterEqual(int(funnel["routed"]), 1)
             self.assertEqual(0, int(funnel["ghost_match"]))
+
+    def test_phase_qualified_resolution_keys_do_not_collapse_duplicate_skill_ids(self) -> None:
+        resolution_key_block = extract_block(
+            r"^function Get-VibeSpecialistDispatchResolutionKey \{.*?^}\s*$"
+        )
+        approved_keys_expr = extract_expression(r"^\$approvedDispatchResolutionKeys = (.+)$")
+        executed_keys_expr = extract_expression(r"^\$executedSpecialistResolutionKeys = (.+)$")
+        routed_keys_expr = extract_expression(r"^\$directRoutedSpecialistResolutionKeys = (.+)$")
+        resolved_keys_expr = extract_expression(r"^\$resolvedSpecialistResolutionKeys = (.+)$")
+        approved_not_resolved_expr = extract_expression(r"^\$approvedDispatchNotResolved = (.+)$")
+
+        payload = run_powershell_json(
+            (
+                "& { "
+                f"{resolution_key_block} "
+                "$approvedDispatch = @("
+                "[pscustomobject]@{ skill_id = 'demo-skill'; dispatch_phase = 'pre_execution' },"
+                "[pscustomobject]@{ skill_id = 'demo-skill'; dispatch_phase = 'verification' }"
+                "); "
+                "$verifiedSpecialistUnits = @("
+                "[pscustomobject]@{ skill_id = 'demo-skill'; dispatch_phase = 'pre_execution' }"
+                "); "
+                "$directRoutedSpecialistUnits = @(); "
+                f"$approvedDispatchResolutionKeys = {approved_keys_expr}; "
+                f"$executedSpecialistResolutionKeys = {executed_keys_expr}; "
+                f"$directRoutedSpecialistResolutionKeys = {routed_keys_expr}; "
+                f"$resolvedSpecialistResolutionKeys = {resolved_keys_expr}; "
+                f"$approvedDispatchNotResolved = {approved_not_resolved_expr}; "
+                "[pscustomobject]@{ "
+                "approved = @($approvedDispatchResolutionKeys | Sort-Object); "
+                "resolved = @($resolvedSpecialistResolutionKeys | Sort-Object); "
+                "not_resolved = @($approvedDispatchNotResolved | Sort-Object) "
+                "} | ConvertTo-Json -Depth 20 }"
+            )
+        )
+
+        self.assertEqual(
+            ["pre_execution|demo-skill", "verification|demo-skill"],
+            list(payload["approved"]),
+        )
+        self.assertEqual(["pre_execution|demo-skill"], list(payload["resolved"]))
+        self.assertEqual(["verification|demo-skill"], list(payload["not_resolved"]))
 
     def test_metrics_record_destructive_block_instead_of_ghost_match(self) -> None:
         with tempfile.TemporaryDirectory() as tempdir:

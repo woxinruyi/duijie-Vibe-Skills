@@ -2329,7 +2329,7 @@ function New-VibeHostStageDisclosureEventProjection {
             continue
         }
         $state = [string]$skill.state
-        if ($state -match '^routed') {
+        if ($state -match '(^|_)routed($|_)') {
             $hasRoutedConsultation = $true
         }
         if ($state -in @('completed', 'completed_with_notes', 'consulted')) {

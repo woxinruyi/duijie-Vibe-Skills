@@ -672,6 +672,21 @@ function Resolve-VibeNativeSpecialistAdapter {
     if (-not [string]::IsNullOrWhiteSpace($modeOverride)) {
         $executionMode = [string]$modeOverride
     }
+    $allowedExecutionModes = @('direct_current_session_route', 'host_subprocess')
+    if ($executionMode -notin $allowedExecutionModes) {
+        return [pscustomobject]@{
+            enabled = $true
+            live_execution_allowed = $false
+            reason = ("native_specialist_execution_mode_invalid:{0}" -f $executionMode)
+            runtime = $runtime
+            policy = $policy
+            adapter = $null
+            requested_host_adapter_id = [string]$runtimeHostAdapterIdentity.requested_host_id
+            effective_host_adapter_id = [string]$runtimeHostAdapterIdentity.effective_host_id
+            command_path = $null
+            invocation_arguments_prefix = @()
+        }
+    }
     if ($null -eq $policy -or -not [bool]$policy.enabled) {
         return [pscustomobject]@{
             enabled = $false

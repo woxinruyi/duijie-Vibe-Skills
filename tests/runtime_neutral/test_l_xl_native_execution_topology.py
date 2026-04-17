@@ -887,6 +887,8 @@ class NativeExecutionTopologyTests(unittest.TestCase):
                 artifact_root=temp_path,
                 governance_scope="root",
                 extra_env={
+                    "VGO_NATIVE_SPECIALIST_EXECUTION_MODE": "",
+                    "VGO_SPECIALIST_CONSULTATION_MODE": "",
                     "VGO_ENABLE_NATIVE_SPECIALIST_EXECUTION": "1",
                     "VGO_DISABLE_NATIVE_SPECIALIST_EXECUTION": "0",
                 },

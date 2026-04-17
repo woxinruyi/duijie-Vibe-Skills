@@ -163,6 +163,8 @@ class SkillPromotionDestructiveGateTests(unittest.TestCase):
                 ML_PROMPT,
                 temp_path,
                 extra_env={
+                    "VGO_NATIVE_SPECIALIST_EXECUTION_MODE": "",
+                    "VGO_SPECIALIST_CONSULTATION_MODE": "",
                     "VGO_DISABLE_NATIVE_SPECIALIST_EXECUTION": "0",
                     "VGO_CODEX_EXECUTABLE": str(fake_codex),
                 },

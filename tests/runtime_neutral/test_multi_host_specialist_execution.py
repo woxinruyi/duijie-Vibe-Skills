@@ -167,6 +167,8 @@ class MultiHostSpecialistExecutionTests(unittest.TestCase):
                         artifact_root=temp_path,
                         extra_env={
                             "VCO_HOST_ID": host_id,
+                            "VGO_NATIVE_SPECIALIST_EXECUTION_MODE": "",
+                            "VGO_SPECIALIST_CONSULTATION_MODE": "",
                             "VGO_ENABLE_NATIVE_SPECIALIST_EXECUTION": "1",
                             "VGO_DISABLE_NATIVE_SPECIALIST_EXECUTION": "0",
                             env_name: str(wrapper),
@@ -189,6 +191,33 @@ class MultiHostSpecialistExecutionTests(unittest.TestCase):
                         self.assertFalse(bool(result["live_native_execution"]))
                         self.assertFalse(bool(result["degraded"]))
                         self.assertFalse(bool(result["blocked"]))
+
+    def test_invalid_specialist_execution_mode_fails_closed(self) -> None:
+        with tempfile.TemporaryDirectory() as tempdir:
+            payload = run_runtime(
+                TASK,
+                artifact_root=Path(tempdir),
+                extra_env={
+                    "VCO_HOST_ID": "openclaw",
+                    "VGO_ENABLE_NATIVE_SPECIALIST_EXECUTION": "1",
+                    "VGO_DISABLE_NATIVE_SPECIALIST_EXECUTION": "0",
+                    "VGO_NATIVE_SPECIALIST_EXECUTION_MODE": "typo-mode",
+                },
+            )
+            summary = payload["summary"]
+            execution_manifest = load_json(summary["artifacts"]["execution_manifest"])
+            specialist_accounting = execution_manifest["specialist_accounting"]
+
+            self.assertEqual("explicitly_degraded", specialist_accounting["effective_execution_status"])
+            self.assertEqual(0, int(specialist_accounting["executed_specialist_unit_count"]))
+            self.assertEqual(0, int(specialist_accounting["direct_routed_specialist_unit_count"]))
+            degraded_units = list(specialist_accounting["degraded_specialist_units"])
+            self.assertGreaterEqual(len(degraded_units), 1)
+            first = load_json(degraded_units[0]["result_path"])
+            self.assertEqual(
+                "native_specialist_execution_mode_invalid:typo-mode",
+                first["degradation_reason"],
+            )
 
     def test_non_codex_hosts_can_execute_live_specialist_lane_when_wrapper_is_configured(self) -> None:
         for host_id, env_name, command_name in HOST_CASES:

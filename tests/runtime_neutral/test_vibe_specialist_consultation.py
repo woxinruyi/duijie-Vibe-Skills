@@ -643,6 +643,26 @@ class VibeSpecialistConsultationTests(unittest.TestCase):
             completed.stderr,
         )
 
+    def test_host_stage_disclosure_treats_suffix_routed_states_as_routed(self) -> None:
+        result = run_runtime_common_json(
+            """
+            $segment = [pscustomobject]@{
+                segment_id = 'discussion_consultation'
+                stage = 'deep_interview'
+                skills = @(
+                    [pscustomobject]@{
+                        skill_id = 'systematic-debugging'
+                        state = 'direct_current_session_routed'
+                    }
+                )
+            }
+            $result = New-VibeHostStageDisclosureEventProjection -Segment $segment
+            $result | ConvertTo-Json -Depth 20
+            """
+        )
+
+        self.assertEqual("discussion_consultation_routed", result["event_id"])
+
     def test_consultation_window_invokes_specialist_and_emits_progressive_disclosure(self) -> None:
         shell = resolve_powershell()
         if shell is None:
